@@ -1,4 +1,4 @@
-SkeekS framework for yii2
+Automatically compile and merge files js + css
 ===================================
 
 skeeks/yii2-assets-auto-compress
