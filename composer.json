@@ -19,10 +19,9 @@
 	"require": {
 		"yiisoft/yii2": "*"
 	},
-
     "autoload": {
         "psr-4": {
-            "skeeks\\yii2\\assetsauto": ""
+            "skeeks\\yii2\\assetsAuto\\": ""
         }
     }
 }
