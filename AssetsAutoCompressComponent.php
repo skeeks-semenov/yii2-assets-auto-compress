@@ -43,6 +43,8 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
 
 
+
+
     /**
      * @var bool Включение объединения css файлов
      */
@@ -53,6 +55,10 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $cssFileRemouteCompile = false;
 
+    /**
+     * @var bool Включить сжатие и обработку css перед сохранением в файл
+     */
+    public $cssFileCompress = false;
 
 
     /**
@@ -103,22 +109,17 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                     \Yii::endProfile('Compress assets');
                 }
             });
-
-            /*$app->response->on(Response::EVENT_AFTER_PREPARE, function(Event $e)
-            {
-                /**
-                 * @var $response Response
-                $response = $e->sender;
-                if ($response->format == Response::FORMAT_HTML)
-                {
-                    //Подмена контента
-                    //$response->content = '111';
-                    //print_r($response);die;
-                }
-            });*/
         }
     }
 
+
+    /**
+     * @return string
+     */
+    public function getSettingsHash()
+    {
+        return serialize((array) $this);
+    }
     /**
      * @param View $view
      */
@@ -187,7 +188,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     protected function _processingJsFiles($files = [])
     {
-        $fileName   =  md5( implode(array_keys($files)) ) . '.js';
+        $fileName   =  md5( implode(array_keys($files)) . $this->getSettingsHash()) . '.js';
         $publicUrl  = \Yii::getAlias('@web/assets/js-compress/' . $fileName);
 
         $rootDir    = \Yii::getAlias('@webroot/assets/js-compress');
@@ -276,7 +277,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     protected function _processingCssFiles($files = [])
     {
-        $fileName   =  md5( implode(array_keys($files)) ) . '.css';
+        $fileName   =  md5( implode(array_keys($files)) . $this->getSettingsHash() ) . '.css';
         $publicUrl  = \Yii::getAlias('@web/assets/css-compress/' . $fileName);
 
         $rootDir    = \Yii::getAlias('@webroot/assets/css-compress');
@@ -320,10 +321,12 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 $contentTmp    = \Minify_CSS::minify($contentTmp, [
                     "prependRelativePath" => $prependRelativePath,
 
-                    'compress' => false,
-                    'removeCharsets' => false,
-                    'preserveComments' => false,
+                    'compress'          => true,
+                    'removeCharsets'    => true,
+                    'preserveComments'  => true,
                 ]);
+
+                //$contentTmp = \CssMin::minify($contentTmp);
 
                 $resultContent[] = $contentTmp;
             } else
@@ -351,7 +354,10 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 }
             }
 
-            $content = \CssMin::minify($content);
+            if ($this->cssFileCompress)
+            {
+                $content = \CssMin::minify($content);
+            }
 
             $file = fopen($rootUrl, "w");
             fwrite($file, $content);
