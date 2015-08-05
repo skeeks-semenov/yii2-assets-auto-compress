@@ -44,6 +44,29 @@ How to use
 
 
 
+```php
+//App config
+[
+    'bootstrap'    => ['assetsAutoCompress'],
+    'components'    =>
+    [
+    //....
+        'assetsAutoCompress' =>
+        [
+            'class'             => '\skeeks\yii2\assetsAuto\AssetsAutoCompressComponent',
+            'enabled'           => true,
+            'jsCompress'        => true,
+            'cssFileCompile'    => true,
+            'jsFileCompile'     => true,
+        ],
+    //....
+    ]
+]
+
+```
+
+
+
 > [![skeeks!](https://gravatar.com/userimage/74431132/13d04d83218593564422770b616e5622.jpg)](http://www.skeeks.com)  
 <i>Web development has never been so fun!</i>  
 [www.skeeks.com](http://www.skeeks.com)
