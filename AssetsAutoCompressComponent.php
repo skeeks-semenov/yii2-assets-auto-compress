@@ -61,6 +61,8 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     public $cssFileCompress = false;
 
 
+
+
     /**
      * @var bool Включение объединения js файлов
      */
