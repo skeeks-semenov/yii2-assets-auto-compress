@@ -46,7 +46,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     /**
      * @var bool ¬ключение объединени€ css файлов
      */
-    public $cssFileCompile = false;
+    public $cssFileCompile = true;
 
     /**
      * @var bool ѕытатьс€ получить файлы css к которым указан путь как к удаленному файлу, скчать его к себе.
@@ -88,6 +88,9 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             //$content = ob_get_clean();
             $app->view->on(View::EVENT_END_PAGE, function(Event $e)
             {
+                include_once __DIR__ . '/libs/minify-2.1.7/min/lib/Minify/Loader.php';
+                \Minify_Loader::register();
+
                 /**
                  * @var $view View
                  */
@@ -308,7 +311,21 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         {
             if (Url::isRelative($fileCode))
             {
-                $resultContent[] = trim(file_get_contents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+                $contentTmp         = trim(file_get_contents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+
+                $fileCodeTmp = explode("/", $fileCode);
+                unset($fileCodeTmp[count($fileCodeTmp) - 1]);
+                $prependRelativePath = implode("/", $fileCodeTmp) . "/";
+
+                $contentTmp    = \Minify_CSS::minify($contentTmp, [
+                    "prependRelativePath" => $prependRelativePath,
+
+                    'compress' => false,
+                    'removeCharsets' => false,
+                    'preserveComments' => false,
+                ]);
+
+                $resultContent[] = $contentTmp;
             } else
             {
                 if ($this->cssFileRemouteCompile)
@@ -325,7 +342,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
         if ($resultContent)
         {
-            $content = implode($resultContent, ";\n");
+            $content = implode($resultContent, "\n");
             if (!is_dir($rootDir))
             {
                 if (!FileHelper::createDirectory($rootDir, 0777))
@@ -333,6 +350,8 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                     return $files;
                 }
             }
+
+            $content = \CssMin::minify($content);
 
             $file = fopen($rootUrl, "w");
             fwrite($file, $content);
