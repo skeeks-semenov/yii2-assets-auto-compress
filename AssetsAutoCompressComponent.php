@@ -2,12 +2,12 @@
 /**
  * @author Semenov Alexander <semenov@skeeks.com>
  * @link http://skeeks.com/
- * @copyright 2010 SkeekS (СкикС)
+ * @copyright 2010 SkeekS (РЎРєРёРєРЎ)
  * @date 05.08.2015
  */
 namespace skeeks\yii2\assetsAuto;
 
-use skeeks\cms\helpers\FileHelper;
+use yii\helpers\FileHelper;
 use yii\base\BootstrapInterface;
 use yii\base\Component;
 use yii\base\Event;
@@ -25,7 +25,7 @@ use yii\web\View;
 class AssetsAutoCompressComponent extends Component implements BootstrapInterface
 {
     /**
-     * @var bool Включение выключение механизма компиляции
+     * @var bool Р’РєР»СЋС‡РµРЅРёРµ РІС‹РєР»СЋС‡РµРЅРёРµ РјРµС…Р°РЅРёР·РјР° РєРѕРјРїРёР»СЏС†РёРё
      */
     public $enabled = true;
 
@@ -36,7 +36,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $jsCompress = true;
     /**
-     * @var bool Выризать комментарии при обработке js
+     * @var bool Р’С‹СЂРёР·Р°С‚СЊ РєРѕРјРјРµРЅС‚Р°СЂРёРё РїСЂРё РѕР±СЂР°Р±РѕС‚РєРµ js
      */
     public $jsCompressFlaggedComments = true;
 
@@ -44,34 +44,34 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
 
     /**
-     * @var bool Включение объединения css файлов
+     * @var bool Р’РєР»СЋС‡РµРЅРёРµ РѕР±СЉРµРґРёРЅРµРЅРёСЏ css С„Р°Р№Р»РѕРІ
      */
     public $cssFileCompile = true;
 
     /**
-     * @var bool Пытаться получить файлы css к которым указан путь как к удаленному файлу, скчать его к себе.
+     * @var bool РџС‹С‚Р°С‚СЊСЃСЏ РїРѕР»СѓС‡РёС‚СЊ С„Р°Р№Р»С‹ css Рє РєРѕС‚РѕСЂС‹Рј СѓРєР°Р·Р°РЅ РїСѓС‚СЊ РєР°Рє Рє СѓРґР°Р»РµРЅРЅРѕРјСѓ С„Р°Р№Р»Сѓ, СЃРєС‡Р°С‚СЊ РµРіРѕ Рє СЃРµР±Рµ.
      */
     public $cssFileRemouteCompile = false;
 
 
 
     /**
-     * @var bool Включение объединения js файлов
+     * @var bool Р’РєР»СЋС‡РµРЅРёРµ РѕР±СЉРµРґРёРЅРµРЅРёСЏ js С„Р°Р№Р»РѕРІ
      */
     public $jsFileCompile = true;
 
     /**
-     * @var bool Пытаться получить файлы js к которым указан путь как к удаленному файлу, скчать его к себе.
+     * @var bool РџС‹С‚Р°С‚СЊСЃСЏ РїРѕР»СѓС‡РёС‚СЊ С„Р°Р№Р»С‹ js Рє РєРѕС‚РѕСЂС‹Рј СѓРєР°Р·Р°РЅ РїСѓС‚СЊ РєР°Рє Рє СѓРґР°Р»РµРЅРЅРѕРјСѓ С„Р°Р№Р»Сѓ, СЃРєС‡Р°С‚СЊ РµРіРѕ Рє СЃРµР±Рµ.
      */
     public $jsFileRemouteCompile = false;
 
     /**
-     * @var bool Включить сжатие и обработку js перед сохранением в файл
+     * @var bool Р’РєР»СЋС‡РёС‚СЊ СЃР¶Р°С‚РёРµ Рё РѕР±СЂР°Р±РѕС‚РєСѓ js РїРµСЂРµРґ СЃРѕС…СЂР°РЅРµРЅРёРµРј РІ С„Р°Р№Р»
      */
     public $jsFileCompress = true;
 
     /**
-     * @var bool Выризать комментарии при обработке js
+     * @var bool Р’С‹СЂРёР·Р°С‚СЊ РєРѕРјРјРµРЅС‚Р°СЂРёРё РїСЂРё РѕР±СЂР°Р±РѕС‚РєРµ js
      */
     public $jsFileCompressFlaggedComments = true;
 
@@ -111,7 +111,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 $response = $e->sender;
                 if ($response->format == Response::FORMAT_HTML)
                 {
-                    //Подмена контента
+                    //РџРѕРґРјРµРЅР° РєРѕРЅС‚РµРЅС‚Р°
                     //$response->content = '111';
                     //print_r($response);die;
                 }
@@ -124,7 +124,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     protected function _processing(View $view)
     {
-        //Компиляция файлов js в один.
+        //РљРѕРјРїРёР»СЏС†РёСЏ С„Р°Р№Р»РѕРІ js РІ РѕРґРёРЅ.
         if ($view->jsFiles && $this->jsFileCompile)
         {
             \Yii::beginProfile('Compress js files');
@@ -138,7 +138,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             \Yii::endProfile('Compress js files');
         }
 
-        //Компиляция js кода который встречается на странице
+        //РљРѕРјРїРёР»СЏС†РёСЏ js РєРѕРґР° РєРѕС‚РѕСЂС‹Р№ РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ РЅР° СЃС‚СЂР°РЅРёС†Рµ
         if ($view->js && $this->jsCompress)
         {
             \Yii::beginProfile('Compress js code');
@@ -152,7 +152,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             \Yii::endProfile('Compress js code');
         }
 
-        //Компиляция css файлов который встречается на странице
+        //РљРѕРјРїРёР»СЏС†РёСЏ css С„Р°Р№Р»РѕРІ РєРѕС‚РѕСЂС‹Р№ РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ РЅР° СЃС‚СЂР°РЅРёС†Рµ
         if ($view->cssFiles && $this->cssFileCompile)
         {
             \Yii::beginProfile('Compress css files');
@@ -227,7 +227,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             {
                 if ($this->jsFileRemouteCompile)
                 {
-                    //Пытаемся скачать удаленный файл
+                    //РџС‹С‚Р°РµРјСЃСЏ СЃРєР°С‡Р°С‚СЊ СѓРґР°Р»РµРЅРЅС‹Р№ С„Р°Р№Р»
                     $resultContent[] = trim(file_get_contents( $fileCode ));
                 } else
                 {
@@ -330,7 +330,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             {
                 if ($this->cssFileRemouteCompile)
                 {
-                    //Пытаемся скачать удаленный файл
+                    //РџС‹С‚Р°РµРјСЃСЏ СЃРєР°С‡Р°С‚СЊ СѓРґР°Р»РµРЅРЅС‹Р№ С„Р°Р№Р»
                     $resultContent[] = trim(file_get_contents( $fileCode ));
                 } else
                 {
