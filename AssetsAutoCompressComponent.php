@@ -29,10 +29,52 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $enabled = true;
 
+
+
+    /**
+     * @var bool
+     */
+    public $jsCompress = true;
+    /**
+     * @var bool Выризать комментарии при обработке js
+     */
+    public $jsCompressFlaggedComments = true;
+
+
+
+
+    /**
+     * @var bool Включение объединения css файлов
+     */
+    public $cssFileCompile = false;
+
+    /**
+     * @var bool Пытаться получить файлы css к которым указан путь как к удаленному файлу, скчать его к себе.
+     */
+    public $cssFileRemouteCompile = false;
+
+
+
     /**
      * @var bool Включение объединения js файлов
      */
-    public $enabledJsFileCompile = true;
+    public $jsFileCompile = true;
+
+    /**
+     * @var bool Пытаться получить файлы js к которым указан путь как к удаленному файлу, скчать его к себе.
+     */
+    public $jsFileRemouteCompile = false;
+
+    /**
+     * @var bool Включить сжатие и обработку js перед сохранением в файл
+     */
+    public $jsFileCompress = true;
+
+    /**
+     * @var bool Выризать комментарии при обработке js
+     */
+    public $jsFileCompressFlaggedComments = true;
+
 
 
     /**
@@ -53,7 +95,9 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
                 if ($this->enabled && $view instanceof View && \Yii::$app->response->format == Response::FORMAT_HTML && !\Yii::$app->request->isAjax && !\Yii::$app->request->isPjax)
                 {
+                    \Yii::beginProfile('Compress assets');
                     $this->_processing($view);
+                    \Yii::endProfile('Compress assets');
                 }
             });
 
@@ -77,8 +121,10 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     protected function _processing(View $view)
     {
-        if ($view->jsFiles && $this->enabledJsFileCompile)
+        //Компиляция файлов js в один.
+        if ($view->jsFiles && $this->jsFileCompile)
         {
+            \Yii::beginProfile('Compress js files');
             foreach ($view->jsFiles as $pos => $files)
             {
                 if ($files)
@@ -86,7 +132,50 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                     $view->jsFiles[$pos] = $this->_processingJsFiles($files);
                 }
             }
+            \Yii::endProfile('Compress js files');
         }
+
+        //Компиляция js кода который встречается на странице
+        if ($view->js && $this->jsCompress)
+        {
+            \Yii::beginProfile('Compress js code');
+            foreach ($view->js as $pos => $parts)
+            {
+                if ($parts)
+                {
+                    $view->js[$pos] = $this->_processingJs($parts);
+                }
+            }
+            \Yii::endProfile('Compress js code');
+        }
+
+        //Компиляция css файлов который встречается на странице
+        if ($view->cssFiles && $this->cssFileCompile)
+        {
+            \Yii::beginProfile('Compress css files');
+            $view->cssFiles = $this->_processingCssFiles($view->cssFiles);
+            \Yii::endProfile('Compress css files');
+        }
+    }
+
+    /**
+     * @param $parts
+     * @return array
+     * @throws \Exception
+     */
+    protected function _processingJs($parts)
+    {
+        $result = [];
+
+        if ($parts)
+        {
+            foreach ($parts as $key => $value)
+            {
+                $result[$key] = \JShrink\Minifier::minify($value, ['flaggedComments' => $this->jsCompressFlaggedComments]);
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -95,7 +184,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     protected function _processingJsFiles($files = [])
     {
-        $fileName   =  md5(implode(array_keys($files))) . '.js';
+        $fileName   =  md5( implode(array_keys($files)) ) . '.js';
         $publicUrl  = \Yii::getAlias('@web/assets/js-compress/' . $fileName);
 
         $rootDir    = \Yii::getAlias('@webroot/assets/js-compress');
@@ -110,6 +199,12 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 if (!Url::isRelative($fileCode))
                 {
                     $resultFiles[$fileCode] = $fileTag;
+                } else
+                {
+                    if ($this->jsFileRemouteCompile)
+                    {
+                        $resultFiles[$fileCode] = $fileTag;
+                    }
                 }
             }
 
@@ -127,8 +222,103 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 $resultContent[] = trim(file_get_contents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
             } else
             {
-                //$resultContent = trim(file_get_contents( $fileCode ));
-                $resultFiles[$fileCode] = $fileTag;
+                if ($this->jsFileRemouteCompile)
+                {
+                    //Пытаемся скачать удаленный файл
+                    $resultContent[] = trim(file_get_contents( $fileCode ));
+                } else
+                {
+                    $resultFiles[$fileCode] = $fileTag;
+                }
+            }
+
+        }
+
+        if ($resultContent)
+        {
+            $content = implode($resultContent, ";\n");
+            if (!is_dir($rootDir))
+            {
+                if (!FileHelper::createDirectory($rootDir, 0777))
+                {
+                    return $files;
+                }
+            }
+
+            if ($this->jsFileCompress)
+            {
+                $content = \JShrink\Minifier::minify($content, ['flaggedComments' => $this->jsFileCompressFlaggedComments]);
+            }
+
+            $file = fopen($rootUrl, "w");
+            fwrite($file, $content);
+            fclose($file);
+        }
+
+
+        if (file_exists($rootUrl))
+        {
+            $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
+            $resultFiles[$publicUrl]    = Html::jsFile($publicUrl);
+            return $resultFiles;
+        } else
+        {
+            return $files;
+        }
+    }
+
+    /**
+     * @param array $files
+     * @return array
+     */
+    protected function _processingCssFiles($files = [])
+    {
+        $fileName   =  md5( implode(array_keys($files)) ) . '.css';
+        $publicUrl  = \Yii::getAlias('@web/assets/css-compress/' . $fileName);
+
+        $rootDir    = \Yii::getAlias('@webroot/assets/css-compress');
+        $rootUrl    = $rootDir . '/' . $fileName;
+
+        if (file_exists($rootUrl))
+        {
+            $resultFiles        = [];
+
+            foreach ($files as $fileCode => $fileTag)
+            {
+                if (!Url::isRelative($fileCode))
+                {
+                    $resultFiles[$fileCode] = $fileTag;
+                } else
+                {
+                    if ($this->cssFileRemouteCompile)
+                    {
+                        $resultFiles[$fileCode] = $fileTag;
+                    }
+                }
+            }
+
+            $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
+            $resultFiles[$publicUrl]    = Html::cssFile($publicUrl);
+            return $resultFiles;
+        }
+
+        $resultContent  = [];
+        $resultFiles    = [];
+        foreach ($files as $fileCode => $fileTag)
+        {
+            if (Url::isRelative($fileCode))
+            {
+                $resultContent[] = trim(file_get_contents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+            } else
+            {
+                if ($this->cssFileRemouteCompile)
+                {
+                    //Пытаемся скачать удаленный файл
+                    $resultContent[] = trim(file_get_contents( $fileCode ));
+                } else
+                {
+                    $resultFiles[$fileCode] = $fileTag;
+                }
             }
 
         }
@@ -153,7 +343,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         if (file_exists($rootUrl))
         {
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
-            $resultFiles[$publicUrl]    = Html::jsFile($publicUrl);
+            $resultFiles[$publicUrl]    = Html::cssFile($publicUrl);
             return $resultFiles;
         } else
         {
@@ -161,20 +351,5 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         }
     }
 
-    /**
-     * @param $filePath
-     * @return string
-     */
-    protected function _readJsCssFile($fileCode)
-    {
-        if (Url::isRelative($fileCode))
-        {
-            $resultContent = trim(file_get_contents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
-        } else
-        {
-            $resultContent = trim(file_get_contents( $fileCode ));
-        }
 
-        return $resultContent;
-    }
 }
