@@ -94,9 +94,6 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             //$content = ob_get_clean();
             $app->view->on(View::EVENT_END_PAGE, function(Event $e)
             {
-                include_once __DIR__ . '/libs/minify-2.1.7/min/lib/Minify/Loader.php';
-                \Minify_Loader::register();
-
                 /**
                  * @var $view View
                  */
@@ -157,6 +154,10 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         if ($view->cssFiles && $this->cssFileCompile)
         {
             \Yii::beginProfile('Compress css files');
+
+            include_once __DIR__ . '/libs/minify-2.1.7/min/lib/Minify/Loader.php';
+            \Minify_Loader::register();
+
             $view->cssFiles = $this->_processingCssFiles($view->cssFiles);
             \Yii::endProfile('Compress css files');
         }
