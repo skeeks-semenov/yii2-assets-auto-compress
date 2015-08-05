@@ -17,7 +17,8 @@
 		}
 	],
 	"require": {
-		"yiisoft/yii2": "*"
+		"yiisoft/yii2": "*",
+		"tedivm/jshrink": "*"
 	},
     "autoload": {
         "psr-4": {
