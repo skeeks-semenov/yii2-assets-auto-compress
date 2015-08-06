@@ -43,6 +43,14 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
 
 
+    /**
+     * @var bool
+     */
+    public $cssCompress = true;
+
+
+
+
 
 
     /**
@@ -152,17 +160,44 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             \Yii::endProfile('Compress js code');
         }
 
+
         //Компиляция css файлов который встречается на странице
         if ($view->cssFiles && $this->cssFileCompile)
         {
             \Yii::beginProfile('Compress css files');
-
-            include_once __DIR__ . '/libs/minify-2.1.7/min/lib/Minify/Loader.php';
-            \Minify_Loader::register();
+            $this->_cssLibInclude();
 
             $view->cssFiles = $this->_processingCssFiles($view->cssFiles);
             \Yii::endProfile('Compress css files');
         }
+
+        //Компиляция css файлов который встречается на странице
+        if ($view->css && $this->cssCompress)
+        {
+            \Yii::beginProfile('Compress css code');
+            $this->_cssLibInclude();
+
+            $view->css = $this->_processingCss($view->css);
+
+            \Yii::endProfile('Compress css code');
+        }
+    }
+
+    private $_cssIncluded = false;
+    /**
+     * @return $this
+     */
+    private function _cssLibInclude()
+    {
+        if ($this->_cssIncluded === false)
+        {
+            include_once __DIR__ . '/libs/minify-2.1.7/min/lib/Minify/Loader.php';
+            \Minify_Loader::register();
+
+            $this->_cssIncluded = true;
+        }
+
+        return $this;
     }
 
     /**
@@ -377,6 +412,28 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         {
             return $files;
         }
+    }
+
+
+    /**
+     * @param array $css
+     * @return array
+     */
+    protected function _processingCss($css = [])
+    {
+        $newCss = [];
+
+        foreach ($css as $code => $value)
+        {
+            $newCss[] = preg_replace_callback('/<style\b[^>]*>(.*)<\/style>/is', function($match)
+            {
+                return $match[1];
+            }, $value);
+        }
+
+        $css = implode($newCss, "\n");
+        $css = \CssMin::minify($css);
+        return [md5($css) => "<style>" . $css . "</style>"];
     }
 
 
