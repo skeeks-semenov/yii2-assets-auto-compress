@@ -19,7 +19,8 @@
 	"require": {
 		"yiisoft/yii2": "*",
 		"tedivm/jshrink": "*",
-		"natxet/cssmin": "*"
+		"natxet/cssmin": "*",
+		"mrclay/minify": "*"
 	},
     "autoload": {
         "psr-4": {

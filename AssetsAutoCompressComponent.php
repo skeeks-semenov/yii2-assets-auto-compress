@@ -109,7 +109,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                  */
                 $view = $e->sender;
 
-                if ($this->enabled && $view instanceof View && \Yii::$app->response->format == Response::FORMAT_HTML && !\Yii::$app->request->isAjax && !\Yii::$app->request->isPjax)
+                if ($this->enabled && $view instanceof View && \Yii::$app->response->format == Response::FORMAT_HTML && !\Yii::$app->request->isAjax)
                 {
                     \Yii::beginProfile('Compress assets');
                     $this->_processing($view);
@@ -165,7 +165,6 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         if ($view->cssFiles && $this->cssFileCompile)
         {
             \Yii::beginProfile('Compress css files');
-            $this->_cssLibInclude();
 
             $view->cssFiles = $this->_processingCssFiles($view->cssFiles);
             \Yii::endProfile('Compress css files');
@@ -175,29 +174,11 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         if ($view->css && $this->cssCompress)
         {
             \Yii::beginProfile('Compress css code');
-            $this->_cssLibInclude();
 
             $view->css = $this->_processingCss($view->css);
 
             \Yii::endProfile('Compress css code');
         }
-    }
-
-    private $_cssIncluded = false;
-    /**
-     * @return $this
-     */
-    private function _cssLibInclude()
-    {
-        if ($this->_cssIncluded === false)
-        {
-            include_once __DIR__ . '/libs/minify-2.1.7/min/lib/Minify/Loader.php';
-            \Minify_Loader::register();
-
-            $this->_cssIncluded = true;
-        }
-
-        return $this;
     }
 
     /**
