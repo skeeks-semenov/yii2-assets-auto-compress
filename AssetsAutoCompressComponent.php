@@ -15,6 +15,7 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\web\Application;
+use yii\web\JsExpression;
 use yii\web\Response;
 use yii\web\View;
 
@@ -72,6 +73,67 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      * @var bool Перенос css файлов вниз страницы
      */
     public $cssFileBottom = false;
+
+    /**
+     * @var bool Перенос css файлов вниз страницы и их подгрузка при помощи js
+     */
+    public $cssFileBottomLoadOnJs = false;
+
+
+    /**
+     * @var bool Включить стандартную быструю предзагрузку.
+     */
+    public $enabledPreloader    = false;
+
+    /**
+     * Особенно актуально в момент переноса css файлов вниз страницы
+     * @var bool Если включена предыдущая опция, этот html код будет вставлен в начало страницы
+     */
+    public $preloaderBodyHtml   = <<<HTML
+<div class="sx-preloader">
+    <div id="sx-loaderImage"></div>
+</div>
+HTML
+;
+    /**
+     * Особенно актуально в момент переноса css файлов вниз страницы
+     * @var bool Если включена предыдущая опция, этот css код будет вставлен в начало страницы
+     */
+    public $preloaderBodyCss    = <<<CSS
+.sx-preloader{
+  display: table;
+  background: #1e1e1e;
+  z-index: 999999;
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  left: 0;
+  top: 0;
+}
+
+#sx-loaderImage {
+  display: table-cell;
+  vertical-align: middle;
+  overflow: hidden;
+  text-align: center;
+}
+
+
+#sx-canvas {
+  display: table-cell;
+  vertical-align: middle;
+  margin: 0 auto;
+}
+CSS
+;
+
+    public $preloaderBodyJs    = <<<JS
+	jQuery(window).load(function(){
+		jQuery('.sx-preloader').fadeOut('slow',function(){jQuery(this).remove();});
+	});
+JS
+;
+
 
 
 
@@ -137,6 +199,20 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     protected function _processing(View $view)
     {
+        //Стандартный прелоадер
+        if ($this->enabledPreloader)
+        {
+            if ($this->preloaderBodyCss)
+            {
+                $view->registerCss($this->preloaderBodyCss);
+            }
+
+            if ($this->preloaderBodyJs)
+            {
+                $view->registerJs($this->preloaderBodyJs);
+            }
+        }
+
         //Компиляция файлов js в один.
         if ($view->jsFiles && $this->jsFileCompile)
         {
@@ -194,23 +270,72 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             \Yii::endProfile('Compress css code');
         }
 
+
         //Перенос файлов css вниз страницы, где файлы js View::POS_END
         if ($view->cssFiles && $this->cssFileBottom)
         {
             \Yii::beginProfile('Moving css files bottom');
 
-            if (ArrayHelper::getValue($view->jsFiles, View::POS_END))
+            if ($this->cssFileBottomLoadOnJs)
             {
-                $view->jsFiles[View::POS_END] = ArrayHelper::merge($view->jsFiles[View::POS_END], $view->cssFiles);
+                \Yii::beginProfile('load css on js');
+
+                    $cssFilesString = implode("", $view->cssFiles);
+                    $view->cssFiles = [];
+
+                    $script = Html::script(new JsExpression(<<<JS
+        document.write('{$cssFilesString}');
+JS
+        ));
+
+                    if (ArrayHelper::getValue($view->jsFiles, View::POS_END))
+                    {
+                        $view->jsFiles[View::POS_END] = ArrayHelper::merge($view->jsFiles[View::POS_END], [$script]);
+
+                    } else
+                    {
+                        $view->jsFiles[View::POS_END][] = $script;
+                    }
+
+
+                \Yii::endProfile('load css on js');
+            } else
+            {
+                if (ArrayHelper::getValue($view->jsFiles, View::POS_END))
+                {
+                    $view->jsFiles[View::POS_END] = ArrayHelper::merge($view->cssFiles, $view->jsFiles[View::POS_END]);
+
+                } else
+                {
+                    $view->jsFiles[View::POS_END] = $view->cssFiles;
+                }
+
+                $view->cssFiles = [];
+            }
+
+
+
+
+            \Yii::endProfile('Moving css files bottom');
+        }
+
+
+
+        //Стандартный прелоадер
+        if ($this->enabledPreloader && $this->preloaderBodyHtml)
+        {
+            \Yii::beginProfile('Adding preloader html');
+
+            if (ArrayHelper::getValue($view->jsFiles, View::POS_BEGIN))
+            {
+                $view->jsFiles[View::POS_BEGIN] = ArrayHelper::merge($view->jsFiles[View::POS_BEGIN], $this->preloaderBodyHtml);
 
             } else
             {
-                $view->jsFiles[View::POS_END] = $view->cssFiles;
+                $view->jsFiles[View::POS_BEGIN][] = $this->preloaderBodyHtml;
             }
 
-            $view->cssFiles = [];
-
-            \Yii::endProfile('Moving css files bottom');
+            \Yii::endProfile('Adding preloader html');
         }
     }
 

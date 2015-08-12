@@ -1,6 +1,12 @@
 CHANGELOG
 ==============
 
+1.0.3
+-----------------
+  * Ability to insert CSS using js
+  * Added ability to enable preloader
+  * It adds the ability to transfer files, css bottom of the page
+
 1.0.2
 -----------------
   * Pjax requests should not be exclusion
