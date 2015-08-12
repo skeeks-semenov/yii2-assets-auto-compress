@@ -71,7 +71,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     /**
      * @var bool Перенос css файлов вниз страницы
      */
-    public $cssFileBottom = true;
+    public $cssFileBottom = false;
 
 
 
