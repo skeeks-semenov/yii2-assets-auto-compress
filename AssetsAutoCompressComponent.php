@@ -68,6 +68,11 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $cssFileCompress = false;
 
+    /**
+     * @var bool Перенос css файлов вниз страницы
+     */
+    public $cssFileBottom = true;
+
 
 
 
@@ -178,6 +183,34 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             $view->css = $this->_processingCss($view->css);
 
             \Yii::endProfile('Compress css code');
+        }
+        //Компиляция css файлов который встречается на странице
+        if ($view->css && $this->cssCompress)
+        {
+            \Yii::beginProfile('Compress css code');
+
+            $view->css = $this->_processingCss($view->css);
+
+            \Yii::endProfile('Compress css code');
+        }
+
+        //Перенос файлов css вниз страницы, где файлы js View::POS_END
+        if ($view->cssFiles && $this->cssFileBottom)
+        {
+            \Yii::beginProfile('Moving css files bottom');
+
+            if (ArrayHelper::getValue($view->jsFiles, View::POS_END))
+            {
+                $view->jsFiles[View::POS_END] = ArrayHelper::merge($view->jsFiles[View::POS_END], $view->cssFiles);
+
+            } else
+            {
+                $view->jsFiles[View::POS_END] = $view->cssFiles;
+            }
+
+            $view->cssFiles = [];
+
+            \Yii::endProfile('Moving css files bottom');
         }
     }
 
