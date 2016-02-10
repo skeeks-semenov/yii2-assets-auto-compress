@@ -30,6 +30,11 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $enabled = true;
 
+    /**
+     * @var int время в секундах на чтение каждого файла
+     */
+    public $readFileTimeout = 3;
+
 
 
     /**
@@ -400,13 +405,13 @@ JS
         {
             if (Url::isRelative($fileCode))
             {
-                $resultContent[] = trim(file_get_contents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+                $resultContent[] = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
             } else
             {
                 if ($this->jsFileRemouteCompile)
                 {
                     //Пытаемся скачать удаленный файл
-                    $resultContent[] = trim(file_get_contents( $fileCode ));
+                    $resultContent[] = trim($this->fileGetContents( $fileCode ));
                 } else
                 {
                     $resultFiles[$fileCode] = $fileTag;
@@ -489,7 +494,7 @@ JS
         {
             if (Url::isRelative($fileCode))
             {
-                $contentTmp         = trim(file_get_contents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+                $contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
 
                 $fileCodeTmp = explode("/", $fileCode);
                 unset($fileCodeTmp[count($fileCodeTmp) - 1]);
@@ -511,7 +516,7 @@ JS
                 if ($this->cssFileRemouteCompile)
                 {
                     //Пытаемся скачать удаленный файл
-                    $resultContent[] = trim(file_get_contents( $fileCode ));
+                    $resultContent[] = trim($this->fileGetContents( $fileCode ));
                 } else
                 {
                     $resultFiles[$fileCode] = $fileTag;
@@ -576,4 +581,37 @@ JS
     }
 
 
+    /**
+     * Read file contents
+     *
+     * @param $file
+     * @return string
+     */
+    public function fileGetContents($file)
+    {
+        if (function_exists('curl_init'))
+        {
+            $url     =   $file;
+            $ch      =   curl_init();
+            $timeout =   (int) $this->readFileTimeout;
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+
+            $result = curl_exec($ch);
+            curl_close($ch);
+
+            return $result;
+        } else
+        {
+            $ctx = stream_context_create(array('http'=>
+                array(
+                    'timeout' => (int) $this->readFileTimeout,  //3 Seconds
+                )
+            ));
+
+            return file_get_contents($file, false, $ctx);
+        }
+    }
 }

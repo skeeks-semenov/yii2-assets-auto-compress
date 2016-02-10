@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.0.4
+-----------------
+  * Added timeout on file reading
+
 1.0.3
 -----------------
   * Ability to insert CSS using js
