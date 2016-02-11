@@ -312,7 +312,7 @@ JS
         {
             if (Url::isRelative($fileCode))
             {
-                $resultContent[] = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+                $resultContent[] = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) )) . "\n;";;
             } else
             {
                 if ($this->jsFileRemouteCompile)
@@ -378,16 +378,17 @@ JS
 
             foreach ($files as $fileCode => $fileTag)
             {
-                if (!Url::isRelative($fileCode))
+                if (Url::isRelative($fileCode))
                 {
-                    $resultFiles[$fileCode] = $fileTag;
+
                 } else
                 {
-                    if ($this->cssFileRemouteCompile)
+                    if (!$this->cssFileRemouteCompile)
                     {
                         $resultFiles[$fileCode] = $fileTag;
                     }
                 }
+
             }
 
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);

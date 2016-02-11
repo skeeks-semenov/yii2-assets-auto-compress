@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.1.1.pre
+-----------------
+  * fix bug download css from remoute
+
 1.1
 -----------------
   * Removed unnecessary settings preloader
