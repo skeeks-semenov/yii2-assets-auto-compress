@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.1
+-----------------
+  * Removed unnecessary settings preloader
+
 1.0.4
 -----------------
   * Added timeout on file reading
