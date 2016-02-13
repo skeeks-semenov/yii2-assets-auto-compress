@@ -66,11 +66,11 @@ How to use
 ```
 
 
-Demo
+Demo (view source code)
 ----------
-view-source:http://skeeks.com/
-view-source:http://select-moto.ru/
-view-source:http://motopraktika.ru/
+http://skeeks.com/
+http://select-moto.ru/
+http://motopraktika.ru/
 
 
 
