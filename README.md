@@ -68,9 +68,9 @@ How to use
 
 Demo (view source code)
 ----------
-http://skeeks.com/
-http://select-moto.ru/
-http://motopraktika.ru/
+* http://skeeks.com/
+* http://select-moto.ru/
+* http://motopraktika.ru/
 
 
 
