@@ -1,7 +1,11 @@
 CHANGELOG
 ==============
 
-1.1.1.pre
+1.1.2
+-----------------
+  * Processing of files with 404 titles
+
+1.1.1
 -----------------
   * fix bug download css from remoute
 

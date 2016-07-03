@@ -13,6 +13,7 @@ use yii\base\Component;
 use yii\base\Event;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\Application;
 use yii\web\JsExpression;
@@ -306,25 +307,34 @@ JS
             return $resultFiles;
         }
 
-        $resultContent  = [];
-        $resultFiles    = [];
-        foreach ($files as $fileCode => $fileTag)
+        //Reading the contents of the files
+        try
         {
-            if (Url::isRelative($fileCode))
+            $resultContent  = [];
+            $resultFiles    = [];
+            foreach ($files as $fileCode => $fileTag)
             {
-                $resultContent[] = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) )) . "\n;";;
-            } else
-            {
-                if ($this->jsFileRemouteCompile)
+                if (Url::isRelative($fileCode))
                 {
-                    //Пытаемся скачать удаленный файл
-                    $resultContent[] = trim($this->fileGetContents( $fileCode ));
+                    $contentFile = $this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) );
+                    $resultContent[] = trim($contentFile) . "\n;";;
                 } else
                 {
-                    $resultFiles[$fileCode] = $fileTag;
+                    if ($this->jsFileRemouteCompile)
+                    {
+                        //Пытаемся скачать удаленный файл
+                        $contentFile = $this->fileGetContents( $fileCode );
+                        $resultContent[] = trim($contentFile);
+                    } else
+                    {
+                        $resultFiles[$fileCode] = $fileTag;
+                    }
                 }
             }
-
+        } catch (\Exception $e)
+        {
+            \Yii::error($e->getMessage(), static::className());
+            return $files;
         }
 
         if ($resultContent)
@@ -342,6 +352,12 @@ JS
             {
                 $content = \JShrink\Minifier::minify($content, ['flaggedComments' => $this->jsFileCompressFlaggedComments]);
             }
+
+            $page = \Yii::$app->request->absoluteUrl;
+            $useFunction = function_exists('curl_init') ? 'curl extension' : 'php file_get_contents';
+            $filesString = implode(', ', array_keys($files));
+
+            \Yii::info("Create js file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::className());
 
             $file = fopen($rootUrl, "w");
             fwrite($file, $content);
@@ -396,41 +412,48 @@ JS
             return $resultFiles;
         }
 
-        $resultContent  = [];
-        $resultFiles    = [];
-        foreach ($files as $fileCode => $fileTag)
+        //Reading the contents of the files
+        try
         {
-            if (Url::isRelative($fileCode))
+            $resultContent  = [];
+            $resultFiles    = [];
+            foreach ($files as $fileCode => $fileTag)
             {
-                $contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
-
-                $fileCodeTmp = explode("/", $fileCode);
-                unset($fileCodeTmp[count($fileCodeTmp) - 1]);
-                $prependRelativePath = implode("/", $fileCodeTmp) . "/";
-
-                $contentTmp    = \Minify_CSS::minify($contentTmp, [
-                    "prependRelativePath" => $prependRelativePath,
-
-                    'compress'          => true,
-                    'removeCharsets'    => true,
-                    'preserveComments'  => true,
-                ]);
-
-                //$contentTmp = \CssMin::minify($contentTmp);
-
-                $resultContent[] = $contentTmp;
-            } else
-            {
-                if ($this->cssFileRemouteCompile)
+                if (Url::isRelative($fileCode))
                 {
-                    //Пытаемся скачать удаленный файл
-                    $resultContent[] = trim($this->fileGetContents( $fileCode ));
+                    $contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+
+                    $fileCodeTmp = explode("/", $fileCode);
+                    unset($fileCodeTmp[count($fileCodeTmp) - 1]);
+                    $prependRelativePath = implode("/", $fileCodeTmp) . "/";
+
+                    $contentTmp    = \Minify_CSS::minify($contentTmp, [
+                        "prependRelativePath" => $prependRelativePath,
+
+                        'compress'          => true,
+                        'removeCharsets'    => true,
+                        'preserveComments'  => true,
+                    ]);
+
+                    //$contentTmp = \CssMin::minify($contentTmp);
+
+                    $resultContent[] = $contentTmp;
                 } else
                 {
-                    $resultFiles[$fileCode] = $fileTag;
+                    if ($this->cssFileRemouteCompile)
+                    {
+                        //Пытаемся скачать удаленный файл
+                        $resultContent[] = trim($this->fileGetContents( $fileCode ));
+                    } else
+                    {
+                        $resultFiles[$fileCode] = $fileTag;
+                    }
                 }
             }
-
+        } catch (\Exception $e)
+        {
+            \Yii::error($e->getMessage(), static::className());
+            return $files;
         }
 
         if ($resultContent)
@@ -448,6 +471,13 @@ JS
             {
                 $content = \CssMin::minify($content);
             }
+
+            $page = \Yii::$app->request->absoluteUrl;
+            $useFunction = function_exists('curl_init') ? 'curl extension' : 'php file_get_contents';
+            $filesString = implode(', ', array_keys($files));
+
+            \Yii::info("Create css file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::className());
+
 
             $file = fopen($rootUrl, "w");
             fwrite($file, $content);
@@ -508,6 +538,21 @@ JS
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
 
             $result = curl_exec($ch);
+            if ($result === false)
+            {
+                $errorMessage = curl_error($ch);
+                curl_close($ch);
+
+                throw new \Exception($errorMessage);
+            }
+
+            $info = curl_getinfo($ch);
+            if (ArrayHelper::getValue($info, 'http_code') == 404)
+            {
+                curl_close($ch);
+                throw new \Exception("File not found: {$file}");
+            }
+
             curl_close($ch);
 
             return $result;
