@@ -1,13 +1,10 @@
 CHANGELOG
 ==============
 
-1.1.2
+1.1.1.pre
 -----------------
-  * Processing of files with 404 titles
-
-1.1.1
------------------
-  * fix bug download css from remoute
+  * fixed bug https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/7
+  * fixed bug download css from remoute server
 
 1.1
 -----------------

@@ -316,7 +316,7 @@ JS
             {
                 if (Url::isRelative($fileCode))
                 {
-                    $contentFile = $this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) );
+                    $contentFile = $this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) );
                     $resultContent[] = trim($contentFile) . "\n;";;
                 } else
                 {
@@ -421,7 +421,7 @@ JS
             {
                 if (Url::isRelative($fileCode))
                 {
-                    $contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias('@web' . $fileCode), true) ));
+                    $contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) ));
 
                     $fileCodeTmp = explode("/", $fileCode);
                     unset($fileCodeTmp[count($fileCodeTmp) - 1]);
