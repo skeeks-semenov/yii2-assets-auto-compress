@@ -82,7 +82,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      * Enable compression and processing before being stored in the css file
      * @var bool
      */
-    public $cssFileCompress = false;
+    public $cssFileCompress = true;
 
     /**
      * Moving down the page css files
