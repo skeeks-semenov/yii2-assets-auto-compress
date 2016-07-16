@@ -7,6 +7,7 @@
  */
 namespace skeeks\yii2\assetsAuto;
 
+use skeeks\yii2\assetsAuto\components\HtmlCompressor;
 use yii\helpers\FileHelper;
 use yii\base\BootstrapInterface;
 use yii\base\Component;
@@ -27,23 +28,27 @@ use yii\web\View;
 class AssetsAutoCompressComponent extends Component implements BootstrapInterface
 {
     /**
-     * @var bool Включение выключение механизма компиляции
+     * Enable or disable the component
+     * @var bool
      */
     public $enabled = true;
 
     /**
-     * @var int время в секундах на чтение каждого файла
+     * Time in seconds for reading each asset file
+     * @var int
      */
     public $readFileTimeout = 3;
 
 
 
     /**
+     * Enable minification js in html code
      * @var bool
      */
     public $jsCompress = true;
     /**
-     * @var bool Выризать комментарии при обработке js
+     * Cut comments during processing js
+     * @var bool
      */
     public $jsCompressFlaggedComments = true;
 
@@ -51,6 +56,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
 
     /**
+     * Enable minification css in html code
      * @var bool
      */
     public $cssCompress = true;
@@ -61,75 +67,117 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
 
     /**
-     * @var bool Включение объединения css файлов
+     * Turning association css files
+     * @var bool
      */
     public $cssFileCompile = true;
 
     /**
-     * @var bool Пытаться получить файлы css к которым указан путь как к удаленному файлу, скчать его к себе.
+     * Trying to get css files to which the specified path as the remote file, skchat him to her.
+     * @var bool
      */
     public $cssFileRemouteCompile = false;
 
     /**
-     * @var bool Включить сжатие и обработку css перед сохранением в файл
+     * Enable compression and processing before being stored in the css file
+     * @var bool
      */
     public $cssFileCompress = false;
 
     /**
-     * @var bool Перенос css файлов вниз страницы
+     * Moving down the page css files
+     * @var bool
      */
     public $cssFileBottom = false;
 
     /**
-     * @var bool Перенос css файлов вниз страницы и их подгрузка при помощи js
+     * Transfer css file down the page and uploading them using js
+     * @var bool
      */
     public $cssFileBottomLoadOnJs = false;
 
 
 
     /**
-     * @var bool Включение объединения js файлов
+     * Turning association js files
+     * @var bool
      */
     public $jsFileCompile = true;
 
     /**
-     * @var bool Пытаться получить файлы js к которым указан путь как к удаленному файлу, скчать его к себе.
+     * Trying to get a js files to which the specified path as the remote file, skchat him to her.
+     * @var bool
      */
     public $jsFileRemouteCompile = false;
 
     /**
-     * @var bool Включить сжатие и обработку js перед сохранением в файл
+     * Enable compression and processing js before saving a file
+     * @var bool
      */
     public $jsFileCompress = true;
 
     /**
-     * @var bool Выризать комментарии при обработке js
+     * Cut comments during processing js
+     * @var bool
      */
     public $jsFileCompressFlaggedComments = true;
 
 
+    /**
+     * Enable compression html
+     * @var bool
+     */
+    public $htmlCompress = true;
+    /**
+     * @var array options for compressing output result
+     *   * extra - use more compact algorithm
+     *   * no-comments - cut all the html comments
+     */
+    public $htmlCompressOptions = [
+        'extra' => true,
+        'no-comments' => true
+    ];
+
+
 
     /**
-     * @param \yii\web\Application $app
+     * @param \yii\base\Application $app
      */
     public function bootstrap($app)
     {
-        if ($app instanceof Application)
+        if ($app instanceof \yii\web\Application)
         {
-            //Response::EVENT_AFTER_SEND,
-            //$content = ob_get_clean();
-            $app->view->on(View::EVENT_END_PAGE, function(Event $e)
+            $app->view->on(View::EVENT_END_PAGE, function(Event $e) use ($app)
             {
                 /**
                  * @var $view View
                  */
                 $view = $e->sender;
 
-                if ($this->enabled && $view instanceof View && \Yii::$app->response->format == Response::FORMAT_HTML && !\Yii::$app->request->isAjax)
+                if ($this->enabled && $view instanceof View && $app->response->format == Response::FORMAT_HTML && !$app->request->isAjax)
                 {
                     \Yii::beginProfile('Compress assets');
                     $this->_processing($view);
                     \Yii::endProfile('Compress assets');
+                }
+            });
+
+            //Html compressing
+            $app->response->on(\yii\web\Response::EVENT_BEFORE_SEND, function (\yii\base\Event $event)
+            {
+                $response = $event->sender;
+
+                if ($this->enabled && $this->htmlCompress && $response->format === \yii\web\Response::FORMAT_HTML)
+                {
+                    if (!empty($response->data))
+                    {
+                        $response->data = $this->_processingHtml($response->data);
+                    }
+
+                    if (!empty($response->content))
+                    {
+                        $response->content = $this->_processingHtml($response->content);
+                    }
                 }
             });
         }
@@ -143,6 +191,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     {
         return serialize((array) $this);
     }
+
     /**
      * @param View $view
      */
@@ -250,6 +299,17 @@ JS
 
             \Yii::endProfile('Moving css files bottom');
         }
+    }
+
+    /**
+     * @param $html
+     * @return string
+     */
+    protected function _processingHtml($html)
+    {
+        //$options = ['no-comments' => true];
+        $options = $this->htmlCompressOptions;
+        return HtmlCompressor::compress($html, $options);
     }
 
     /**

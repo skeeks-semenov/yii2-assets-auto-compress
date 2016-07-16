@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.2.0.pre
+-----------------
+ * Added html compression
+
 1.1.2
 -----------------
  * fixed bug https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/7
