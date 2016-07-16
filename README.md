@@ -77,7 +77,7 @@ How to use
             'jsFileCompressFlaggedComments' => true,        //Cut comments during processing js
             
             'htmlCompress'                  => true,        //Enable compression html
-            'htmlCompressOptions'           =>              //Enable compression html
+            'htmlCompressOptions'           =>              //options for compressing output result
             [
                 'extra' => true,        //use more compact algorithm
                 'no-comments' => true   //cut all the html comments
