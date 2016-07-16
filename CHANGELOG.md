@@ -1,7 +1,7 @@
 CHANGELOG
 ==============
 
-1.1.2.pre
+1.1.2
 -----------------
  * fixed bug https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/7
  * Processing of files with 404 titles
