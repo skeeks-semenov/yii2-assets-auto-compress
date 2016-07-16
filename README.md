@@ -47,7 +47,7 @@ How to use
 
 
 ```php
-//App config
+//App config with all options
 [
     'bootstrap'    => ['assetsAutoCompress'],
     'components'    =>
