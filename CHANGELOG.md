@@ -1,7 +1,7 @@
 CHANGELOG
 ==============
 
-1.2.0.pre
+1.2.0
 -----------------
  * Added html compression
 
