@@ -6,6 +6,8 @@
  * @date 16.07.2016
  */
 namespace skeeks\yii2\assetsAuto\components;
+use yii\helpers\ArrayHelper;
+
 /**
  * Class HtmlCompressor
  * @package skeeks\yii2\assetsAuto\components
@@ -107,19 +109,19 @@ class HtmlCompressor
             }
         }
         // Perform any extra (unsafe) compression techniques...
-        if (array_key_exists('x', $options) || array_key_exists('extra', $options)) {
+        if (array_key_exists('x', $options) || ArrayHelper::getValue($options, 'extra') === true) {
             // Can break layouts that are dependent on whitespace between tags
             $out = str_replace(">\n<", '><', $out);
         }
         // Remove HTML comments...
-        if (array_key_exists('c', $options) || array_key_exists('no-comments', $options)) {
+        if (array_key_exists('c', $options) || ArrayHelper::getValue($options, 'no-comments') === true) {
             $out = preg_replace('/(<!--.*?-->)/ms', '', $out);
             $out = str_replace('<!>', '', $out);
         }
         // Remove the trailing \n
         $out = trim($out);
         // Output either our stats or the compressed data...
-        if (array_key_exists('s', $options) || array_key_exists('stats', $options)) {
+        if (array_key_exists('s', $options) || ArrayHelper::getValue($options, 'stats') === true) {
             $echo = '';
             $echo .= "Original Size: $bytecount\n";
             $echo .= "Compressed Size: " . strlen($out) . "\n";
