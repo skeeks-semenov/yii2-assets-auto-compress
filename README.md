@@ -1,10 +1,10 @@
-Automatically compile and merge files js + css
+Automatically compile and merge files js + css + html
 ===================================
 
 This solution enables you to dynamically combine js and css files to optimize the html page.
 This allows you to improve the performance of google page speed.
 
-This tool only works on real sites. On the local projects is not working.
+This tool only works on real sites. On the local projects is not working!
 
 Installation
 ------------
