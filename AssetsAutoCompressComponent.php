@@ -134,7 +134,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      *   * no-comments - cut all the html comments
      */
     public $htmlCompressOptions = [
-        'extra'         => true,
+        'extra'         => false,
         'no-comments'   => true
     ];
 

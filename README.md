@@ -79,7 +79,7 @@ How to use
             'htmlCompress'                  => true,        //Enable compression html
             'htmlCompressOptions'           =>              //options for compressing output result
             [
-                'extra' => true,        //use more compact algorithm
+                'extra' => false,        //use more compact algorithm
                 'no-comments' => true   //cut all the html comments
             ],     
         ],
