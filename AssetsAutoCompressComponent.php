@@ -154,7 +154,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                  */
                 $view = $e->sender;
 
-                if ($this->enabled && $view instanceof View && $app->response->format == Response::FORMAT_HTML && !$app->request->isAjax)
+                if ($this->enabled && $view instanceof View && $app->response->format == Response::FORMAT_HTML && !$app->request->isAjax && !$app->request->isPjax)
                 {
                     \Yii::beginProfile('Compress assets');
                     $this->_processing($view);
@@ -163,11 +163,11 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             });
 
             //Html compressing
-            $app->response->on(\yii\web\Response::EVENT_BEFORE_SEND, function (\yii\base\Event $event)
+            $app->response->on(\yii\web\Response::EVENT_BEFORE_SEND, function (\yii\base\Event $event) use ($app)
             {
                 $response = $event->sender;
 
-                if ($this->enabled && $this->htmlCompress && $response->format === \yii\web\Response::FORMAT_HTML)
+                if ($this->enabled && $this->htmlCompress && $response->format == \yii\web\Response::FORMAT_HTML && !$app->request->isAjax && !$app->request->isPjax)
                 {
                     if (!empty($response->data))
                     {

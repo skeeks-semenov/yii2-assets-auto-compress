@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.2.2
+-----------------
+ * Fixed https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/6
+
 1.2.1
 -----------------
  * Html compression by default no extra
