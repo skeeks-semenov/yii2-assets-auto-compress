@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.2.3.pre
+-----------------
+ * Do not connect the js files when all pjax requests.
+
 1.2.2
 -----------------
  * Fixed https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/6

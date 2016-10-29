@@ -139,6 +139,12 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     ];
 
 
+    /**
+     * Do not connect the js files when all pjax requests.
+     * @var bool
+     */
+    public $noIncludeJsFilesOnPjax = false;
+
 
     /**
      * @param \yii\base\Application $app
@@ -159,6 +165,12 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                     \Yii::beginProfile('Compress assets');
                     $this->_processing($view);
                     \Yii::endProfile('Compress assets');
+                }
+
+                //TODO:: Think about it
+                if ($this->enabled && $app->request->isPjax && $this->noIncludeJsFilesOnPjax)
+                {
+                    \Yii::$app->view->jsFiles = null;
                 }
             });
 
