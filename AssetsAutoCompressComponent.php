@@ -143,7 +143,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      * Do not connect the js files when all pjax requests.
      * @var bool
      */
-    public $noIncludeJsFilesOnPjax = false;
+    public $noIncludeJsFilesOnPjax = true;
 
 
     /**

@@ -77,6 +77,7 @@ How to use
             'jsFileCompressFlaggedComments' => true,        //Cut comments during processing js
             
             'htmlCompress'                  => true,        //Enable compression html
+            'noIncludeJsFilesOnPjax'        => true,        //Do not connect the js files when all pjax requests
             'htmlCompressOptions'           =>              //options for compressing output result
             [
                 'extra' => false,        //use more compact algorithm
