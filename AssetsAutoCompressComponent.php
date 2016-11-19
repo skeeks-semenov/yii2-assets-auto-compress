@@ -369,6 +369,12 @@ JS
 
             foreach ($files as $fileCode => $fileTag)
             {
+                if(in_array(array_pop(explode('/', $fileCode)), $this->skip))
+                {
+                    $resultFiles[$fileCode] = $fileTag;
+                    continue;
+                }
+
                 if (!Url::isRelative($fileCode))
                 {
                     $resultFiles[$fileCode] = $fileTag;
@@ -480,6 +486,12 @@ JS
 
             foreach ($files as $fileCode => $fileTag)
             {
+                if(in_array(array_pop(explode('/', $fileCode)), $this->skip))
+                {
+                    $resultFiles[$fileCode] = $fileTag;
+                    continue;
+                }
+
                 if (Url::isRelative($fileCode))
                 {
 
@@ -505,6 +517,12 @@ JS
             $resultFiles    = [];
             foreach ($files as $fileCode => $fileTag)
             {
+                if(in_array(array_pop(explode('/', $fileCode)), $this->skip))
+                {
+                    $resultFiles[$fileCode] = $fileTag;
+                    continue;
+                }
+
                 if (Url::isRelative($fileCode))
                 {
                     $contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) ));
