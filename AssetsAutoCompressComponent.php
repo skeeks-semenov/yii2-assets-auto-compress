@@ -147,6 +147,13 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
 
     /**
+     * Skip specific filenames.
+     * @var array
+     */
+    public $skip = [];
+
+
+    /**
      * @param \yii\base\Application $app
      */
     public function bootstrap($app)
@@ -386,6 +393,13 @@ JS
             $resultFiles    = [];
             foreach ($files as $fileCode => $fileTag)
             {
+                
+                if(in_array(array_pop(explode('/', $fileCode)), $this->skip))
+                {
+                    $resultFiles[$fileCode] = $fileTag;
+                    continue;
+                }
+
                 if (Url::isRelative($fileCode))
                 {
                     $contentFile = $this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) );
