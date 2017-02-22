@@ -62,6 +62,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     public $cssCompress = true;
 
 
+    public $cssOptions = [];
 
 
 
@@ -103,6 +104,8 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      * @var bool
      */
     public $jsFileCompile = true;
+
+    public $jsOptions = [];
 
     /**
      * Trying to get a js files to which the specified path as the remote file, skchat him to her.
@@ -375,7 +378,7 @@ JS
             }
 
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
-            $resultFiles[$publicUrl]    = Html::jsFile($publicUrl);
+            $resultFiles[$publicUrl]    = Html::jsFile($publicUrl, $this->jsOptions);
             return $resultFiles;
         }
 
@@ -440,7 +443,7 @@ JS
         if (file_exists($rootUrl))
         {
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
-            $resultFiles[$publicUrl]    = Html::jsFile($publicUrl);
+            $resultFiles[$publicUrl]    = Html::jsFile($publicUrl, $this->jsOptions);
             return $resultFiles;
         } else
         {
@@ -480,7 +483,7 @@ JS
             }
 
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
-            $resultFiles[$publicUrl]    = Html::cssFile($publicUrl);
+            $resultFiles[$publicUrl]    = Html::cssFile($publicUrl, $this->cssOptions);
             return $resultFiles;
         }
 
@@ -560,7 +563,7 @@ JS
         if (file_exists($rootUrl))
         {
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
-            $resultFiles[$publicUrl]    = Html::cssFile($publicUrl);
+            $resultFiles[$publicUrl]    = Html::cssFile($publicUrl, $this->cssOptions);
             return $resultFiles;
         } else
         {
