@@ -622,7 +622,7 @@ JS
             }
 
             $info = curl_getinfo($ch);
-            if (ArrayHelper::getValue($info, 'http_code') == 404)
+            if (isset($info['http_code']) && !ArrayHelper::isIn(ArrayHelper::getValue($info, 'http_code'), [200])) {
             {
                 curl_close($ch);
                 throw new \Exception("File not found: {$file}");
