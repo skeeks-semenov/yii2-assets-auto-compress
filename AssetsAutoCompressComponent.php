@@ -623,7 +623,6 @@ JS
 
             $info = curl_getinfo($ch);
             if (isset($info['http_code']) && !ArrayHelper::isIn(ArrayHelper::getValue($info, 'http_code'), [200])) {
-            {
                 curl_close($ch);
                 throw new \Exception("File not found: {$file}");
             }
@@ -642,5 +641,4 @@ JS
             return file_get_contents($file, false, $ctx);
         }
     }
-}
 }
