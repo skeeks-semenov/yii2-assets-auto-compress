@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.2.3.1
+-----------------
+ * http_code 200
+ 
 1.2.3
 -----------------
  * Do not connect the js files when all pjax requests.
