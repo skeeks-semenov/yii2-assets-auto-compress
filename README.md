@@ -6,6 +6,11 @@ This allows you to improve the performance of google page speed.
 
 This tool only works on real sites. On the local projects is not working!
 
+[![Latest Stable Version](https://poser.pugx.org/skeeks/yii2-assets-auto-compress/v/stable.png)](https://packagist.org/packages/skeeks/yii2-assets-auto-compress)
+[![Total Downloads](https://poser.pugx.org/skeeks/yii2-assets-auto-compress/downloads.png)](https://packagist.org/packages/skeeks/yii2-assets-auto-compress)
+[![Reference Status](https://www.versioneye.com/php/skeeks:yii2-assets-auto-compress/reference_badge.svg)](https://www.versioneye.com/php/skeeks:yii2-assets-auto-compress/references)
+[![Dependency Status](https://www.versioneye.com/php/skeeks:yii2-assets-auto-compress/dev-master/badge.png)](https://www.versioneye.com/php/skeeks:yii2-assets-auto-compress/dev-master)
+
 Installation
 ------------
 
