@@ -17,7 +17,8 @@
 		}
 	],
 	"require": {
-		"yiisoft/yii2": "*",
+		"yiisoft/yii2": "^2",
+		"yiisoft/yii2-httpclient": "^2",
 		"tedivm/jshrink": "*",
 		"natxet/cssmin": "*",
 		"mrclay/minify": "*"
