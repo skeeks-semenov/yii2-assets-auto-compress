@@ -1,6 +1,12 @@
 CHANGELOG
 ==============
 
+1.3.0.pre
+-----------------
+ * Using user-agent header
+ * Do not use @web and @webroot (using \Yii::$app->assetManager->baseUrl and \Yii::$app->assetManager->basePath)
+ * Using yiisoft/yii2-httpclient
+ 
 1.2.3.1
 -----------------
  * http_code 200

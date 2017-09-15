@@ -1,9 +1,9 @@
 <?php
 /**
  * @author Semenov Alexander <semenov@skeeks.com>
- * @link http://skeeks.com/
- * @copyright 2010 SkeekS (СкикС)
- * @date 05.08.2015
+ * @link https://skeeks.com/
+ * @copyright (c) 2010 SkeekS
+ * @date 15.09.2017
  */
 namespace skeeks\yii2\assetsAuto;
 
@@ -16,6 +16,7 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\helpers\Url;
+use yii\httpclient\Client;
 use yii\web\Application;
 use yii\web\JsExpression;
 use yii\web\Response;
@@ -354,28 +355,25 @@ JS
     protected function _processingJsFiles($files = [])
     {
         $fileName   =  md5( implode(array_keys($files)) . $this->getSettingsHash()) . '.js';
-        $publicUrl  = \Yii::getAlias('@web/assets/js-compress/' . $fileName);
+        $publicUrl  = \Yii::$app->assetManager->baseUrl . '/js-compress/' . $fileName;
+        //$publicUrl  = \Yii::getAlias('@web/assets/js-compress/' . $fileName);
 
-        $rootDir    = \Yii::getAlias('@webroot/assets/js-compress');
+        $rootDir    = \Yii::$app->assetManager->basePath . '/js-compress';
+        //$rootDir    = \Yii::getAlias('@webroot/assets/js-compress');
         $rootUrl    = $rootDir . '/' . $fileName;
 
         if (file_exists($rootUrl))
         {
             $resultFiles        = [];
 
-            foreach ($files as $fileCode => $fileTag)
-            {
-                if (!Url::isRelative($fileCode))
-                {
-                    $resultFiles[$fileCode] = $fileTag;
-                } else
-                {
-                    if ($this->jsFileRemouteCompile)
-                    {
+            if (!$this->jsFileRemouteCompile) {
+                foreach ($files as $fileCode => $fileTag) {
+                    if (!Url::isRelative($fileCode)) {
                         $resultFiles[$fileCode] = $fileTag;
                     }
                 }
             }
+
 
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
             $resultFiles[$publicUrl]    = Html::jsFile($publicUrl, $this->jsOptions);
@@ -391,13 +389,18 @@ JS
             {
                 if (Url::isRelative($fileCode))
                 {
+                    /*if ($pos = strpos($fileCode, "?")) {
+                        $fileCode = substr($fileCode, 0, $pos);
+                    }
+                    \Yii::info("file: " . \Yii::getAlias(\Yii::$app->assetManager->basePath . $fileCode), self::class);*/
                     $contentFile = $this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) );
+                    //$contentFile = $this->fileGetContents( \Yii::$app->assetManager->basePath . $fileCode );
                     $resultContent[] = trim($contentFile) . "\n;";;
                 } else
                 {
                     if ($this->jsFileRemouteCompile)
                     {
-                        //Пытаемся скачать удаленный файл
+                        //Try to download the deleted file
                         $contentFile = $this->fileGetContents( $fileCode );
                         $resultContent[] = trim($contentFile);
                     } else
@@ -408,7 +411,7 @@ JS
             }
         } catch (\Exception $e)
         {
-            \Yii::error($e->getMessage(), static::className());
+            \Yii::error(__METHOD__ . ": " . $e->getMessage(), static::class);
             return $files;
         }
 
@@ -458,28 +461,23 @@ JS
     protected function _processingCssFiles($files = [])
     {
         $fileName   =  md5( implode(array_keys($files)) . $this->getSettingsHash() ) . '.css';
-        $publicUrl  = \Yii::getAlias('@web/assets/css-compress/' . $fileName);
+        $publicUrl  = \Yii::$app->assetManager->baseUrl . '/css-compress/' . $fileName;
+        //$publicUrl  = \Yii::getAlias('@web/assets/css-compress/' . $fileName);
 
-        $rootDir    = \Yii::getAlias('@webroot/assets/css-compress');
+        $rootDir    = \Yii::$app->assetManager->basePath . '/css-compress';
+        //$rootDir    = \Yii::getAlias('@webroot/assets/css-compress');
         $rootUrl    = $rootDir . '/' . $fileName;
 
         if (file_exists($rootUrl))
         {
             $resultFiles        = [];
 
-            foreach ($files as $fileCode => $fileTag)
-            {
-                if (Url::isRelative($fileCode))
-                {
-
-                } else
-                {
-                    if (!$this->cssFileRemouteCompile)
-                    {
+            if (!$this->cssFileRemouteCompile) {
+                foreach ($files as $fileCode => $fileTag) {
+                    if (!Url::isRelative($fileCode)) {
                         $resultFiles[$fileCode] = $fileTag;
                     }
                 }
-
             }
 
             $publicUrl                  = $publicUrl . "?v=" . filemtime($rootUrl);
@@ -517,7 +515,7 @@ JS
                 {
                     if ($this->cssFileRemouteCompile)
                     {
-                        //Пытаемся скачать удаленный файл
+                        //Try to download the deleted file
                         $resultContent[] = trim($this->fileGetContents( $fileCode ));
                     } else
                     {
@@ -527,7 +525,7 @@ JS
             }
         } catch (\Exception $e)
         {
-            \Yii::error($e->getMessage(), static::className());
+            \Yii::error(__METHOD__ . ": " . $e->getMessage(), static::class);
             return $files;
         }
 
@@ -593,7 +591,6 @@ JS
         return [md5($css) => "<style>" . $css . "</style>"];
     }
 
-
     /**
      * Read file contents
      *
@@ -602,43 +599,17 @@ JS
      */
     public function fileGetContents($file)
     {
-        if (function_exists('curl_init'))
-        {
-            $url     =   $file;
-            $ch      =   curl_init();
-            $timeout =   (int) $this->readFileTimeout;
+        $client = new Client();
+        $response = $client->createRequest()
+                    ->setMethod('get')
+                    ->setUrl($file)
+                    ->addHeaders(['user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'])
+                    ->send();
 
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-
-            $result = curl_exec($ch);
-            if ($result === false)
-            {
-                $errorMessage = curl_error($ch);
-                curl_close($ch);
-
-                throw new \Exception($errorMessage);
-            }
-
-            $info = curl_getinfo($ch);
-            if (isset($info['http_code']) && !ArrayHelper::isIn(ArrayHelper::getValue($info, 'http_code'), [200])) {
-                curl_close($ch);
-                throw new \Exception("File not found: {$file}");
-            }
-
-            curl_close($ch);
-
-            return $result;
-        } else
-        {
-            $ctx = stream_context_create(array('http'=>
-                array(
-                    'timeout' => (int) $this->readFileTimeout,  //3 Seconds
-                )
-            ));
-
-            return file_get_contents($file, false, $ctx);
+        if ($response->isOk) {
+            return $response->content;
         }
+
+        throw new \Exception("File get contents '{$file}' error: " . $response->content);
     }
 }
