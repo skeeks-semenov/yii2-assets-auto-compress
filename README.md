@@ -1,4 +1,4 @@
-Automatically compile and merge files js + css + html in yii2 project
+Automatically compile and merge files js + css + html in yii2 project.
 ===================================
 
 This solution enables you to dynamically combine js and css files to optimize the html page.
