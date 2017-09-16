@@ -123,7 +123,7 @@ ___
 
 ___
 
-> [![skeeks!](https://skeeks.com/img/logo/studio-black-bg.png)](http://skeeks.com)  
+> [![skeeks!](https://skeeks.com/img/logo/logo-no-title-h100.jpg)](http://skeeks.com)  
 <i>SkeekS CMS (Yii2) — fast, simple, effective!</i>  
 [skeeks.com](https://skeeks.com) | [cms.skeeks.com](https://cms.skeeks.com)
 
