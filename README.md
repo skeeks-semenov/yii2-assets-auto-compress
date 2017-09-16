@@ -104,7 +104,8 @@ Demo (view source code)
 * http://motopraktika.ru/
 
 
-##Screenshot
+Screenshot
+------------
 [![SkeekS CMS admin panel](http://marketplace.cms.skeeks.com/uploads/all/b7/5e/8b/b75e8b31bfda1686d950c7b8783b53b5.png)](http://marketplace.cms.skeeks.com/uploads/all/b7/5e/8b/b75e8b31bfda1686d950c7b8783b53b5.png)
 
 ___
@@ -122,7 +123,7 @@ ___
 
 ___
 
-> [![skeeks!](https://gravatar.com/userimage/74431132/13d04d83218593564422770b616e5622.jpg)](http://skeeks.com)  
+> [![skeeks!](https://skeeks.com/img/logo/studio-black-bg.png)](http://skeeks.com)  
 <i>SkeekS CMS (Yii2) — fast, simple, effective!</i>  
 [skeeks.com](https://skeeks.com) | [cms.skeeks.com](https://cms.skeeks.com)
 
