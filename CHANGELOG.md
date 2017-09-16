@@ -1,7 +1,7 @@
 CHANGELOG
 ==============
 
-1.3.0.pre
+1.3.0
 -----------------
  * Changing the subdirectory with the code in /src
  * Fixed https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/40
