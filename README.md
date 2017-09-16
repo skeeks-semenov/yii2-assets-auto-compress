@@ -99,7 +99,10 @@ How to use
 Links
 ----------
 * [Github](https://github.com/skeeks-semenov/yii2-assets-auto-compress)
+* [Changelog](https://github.com/skeeks-semenov/yii2-assets-auto-compress/blob/master/CHANGELOG.md)
+* [Issues](https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues)
 * [Packagist](https://packagist.org/packages/skeeks/yii2-assets-auto-compress)
+
 
 Demo (view source code)
 ----------
