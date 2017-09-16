@@ -96,12 +96,17 @@ How to use
 ```
 
 
+Links
+----------
+* [Github](https://github.com/skeeks-semenov/yii2-assets-auto-compress)
+* [Packagist](https://packagist.org/packages/skeeks/yii2-assets-auto-compress)
+
 Demo (view source code)
 ----------
-* http://gallery.world
-* http://skeeks.com/
-* http://select-moto.ru/
-* http://motopraktika.ru/
+* [https://gallery.world](https://gallery.world)
+* [http://skeeks.com/](https://skeeks.com)
+* [http://select-moto.ru/](https://select-moto.ru)
+* [http://motopraktika.ru/](https://motopraktika.ru)
 
 
 Screenshot
