@@ -3,6 +3,7 @@ CHANGELOG
 
 1.3.0.pre
 -----------------
+ * Changing the subdirectory with the code in /src
  * Fixed https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/40
  * Using user-agent header
  * Do not use @web and @webroot (using \Yii::$app->assetManager->baseUrl and \Yii::$app->assetManager->basePath)

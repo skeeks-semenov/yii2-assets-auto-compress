@@ -1,21 +1,27 @@
 {
 	"name": "skeeks/yii2-assets-auto-compress",
-	"description": "Automatically compile and merge files js + css",
+	"description": "Automatically compile and merge files js + css + html in yii2 project",
 	"keywords": ["yii", "app", "skeeks", "sx", "framework", "js", "css", "assets", "auto assets"],
     "homepage": "http://www.skeeks.com/",
 	"type": "yii2-extension",
-	"license": "BSD-3-Clause",
+	"license": "GPL-3.0+",
 	"support": {
-        "issues": "http://www.skeeks.com/",
-        "wiki": "http://cms.skeeks.com/wiki/",
-        "source": "https://github.com/skeeks-semenov/yii2-assets-auto-compress"
+        "issues": "https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues",
+        "source": "https://github.com/skeeks-semenov/yii2-assets-auto-compress",
+		"wiki": "https://cms.skeeks.com/",
+		"authors": "https://skeeks.com"
     },
 	"authors": [
-		{
-			"name": "Semenov Alexander",
-			"email": "semenov@skeeks.com"
-		}
-	],
+        {
+            "name": "SkeekS",
+            "email": "support@skeeks.com",
+            "homepage": "https://skeeks.com"
+        },
+        {
+            "name": "Semenov Alexander",
+            "email": "semenov@skeeks.com"
+        }
+    ],
 	"require": {
 		"yiisoft/yii2": "^2",
 		"yiisoft/yii2-httpclient": "^2",
@@ -25,7 +31,7 @@
 	},
     "autoload": {
         "psr-4": {
-            "skeeks\\yii2\\assetsAuto\\": ""
+            "skeeks\\yii2\\assetsAuto\\": "src/"
         }
     }
 }

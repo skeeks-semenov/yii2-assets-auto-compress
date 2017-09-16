@@ -1,9 +1,9 @@
 <?php
 /**
  * @author Semenov Alexander <semenov@skeeks.com>
- * @link http://skeeks.com/
- * @copyright 2010 SkeekS (СкикС)
- * @date 16.07.2016
+ * @link https://skeeks.com/
+ * @copyright (c) 2010 SkeekS
+ * @date 16.09.2017
  */
 namespace skeeks\yii2\assetsAuto\components;
 use yii\helpers\ArrayHelper;
