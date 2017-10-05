@@ -7,6 +7,7 @@ CHANGELOG
  
 1.3.1
 -----------------
+ * Fixed: https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/5
  * Fixed: https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/23
  * Add webroot setting
  * Local read files
