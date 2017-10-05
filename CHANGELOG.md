@@ -1,6 +1,11 @@
 CHANGELOG
 ==============
 
+1.3.1
+-----------------
+ * Add webroot setting
+ * Local read files
+ 
 1.3.0
 -----------------
  * Changing the subdirectory with the code in /src

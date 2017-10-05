@@ -23,6 +23,8 @@ use yii\web\Response;
 use yii\web\View;
 
 /**
+ * @property string $webroot;
+ *
  * Class AssetsAutoCompressComponent
  * @package skeeks\yii2\assetsAuto
  */
@@ -38,7 +40,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      * Time in seconds for reading each asset file
      * @var int
      */
-    public $readFileTimeout = 3;
+    public $readFileTimeout = 1;
 
 
 
@@ -149,6 +151,28 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $noIncludeJsFilesOnPjax = true;
 
+    /**
+     * @var string
+     */
+    protected $_webroot = '@webroot';
+
+    /**
+     * @return bool|string
+     */
+    public function getWebroot()
+    {
+        return \Yii::getAlias($this->_webroot);
+    }
+
+    /**
+     * @param $path
+     * @return $this
+     */
+    public function setWebroot($path)
+    {
+        $this->_webroot = $path;
+        return $this;
+    }
 
     /**
      * @param \yii\base\Application $app
@@ -389,11 +413,15 @@ JS
             {
                 if (Url::isRelative($fileCode))
                 {
-                    /*if ($pos = strpos($fileCode, "?")) {
+                    if ($pos = strpos($fileCode, "?")) {
                         $fileCode = substr($fileCode, 0, $pos);
                     }
-                    \Yii::info("file: " . \Yii::getAlias(\Yii::$app->assetManager->basePath . $fileCode), self::class);*/
-                    $contentFile = $this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) );
+
+                    $fileCode = \Yii::getAlias('@webroot') . $fileCode;
+                    $contentFile = $this->readLocalFile( $fileCode );
+
+                    /**\Yii::info("file: " . \Yii::getAlias(\Yii::$app->assetManager->basePath . $fileCode), self::class);*/
+                    //$contentFile = $this->fileGetContents( Url::to(\Yii::getAlias($tmpFileCode), true) );
                     //$contentFile = $this->fileGetContents( \Yii::$app->assetManager->basePath . $fileCode );
                     $resultContent[] = trim($contentFile) . "\n;";;
                 } else
@@ -494,7 +522,14 @@ JS
             {
                 if (Url::isRelative($fileCode))
                 {
-                    $contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) ));
+                    if ($pos = strpos($fileCode, "?")) {
+                        $fileCode = substr($fileCode, 0, $pos);
+                    }
+
+                    $fileCode = \Yii::getAlias('@webroot') . $fileCode;
+                    $contentTmp = trim($this->readLocalFile( $fileCode ));
+
+                    //$contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) ));
 
                     $fileCodeTmp = explode("/", $fileCode);
                     unset($fileCodeTmp[count($fileCodeTmp) - 1]);
@@ -604,6 +639,9 @@ JS
                     ->setMethod('get')
                     ->setUrl($file)
                     ->addHeaders(['user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'])
+                    ->setOptions([
+                        'timeout' => $this->readFileTimeout, // set timeout to 1 seconds for the case server is not responding
+                    ])
                     ->send();
 
         if ($response->isOk) {
@@ -611,5 +649,21 @@ JS
         }
 
         throw new \Exception("File get contents '{$file}' error: " . $response->content);
+    }
+
+    /**
+     * @param $filePath
+     * @return string
+     * @throws \Exception
+     */
+    public function readLocalFile($filePath)
+    {
+        if (!file_exists($filePath)) {
+            throw new \Exception("Read file error '{$file}'");
+        }
+
+        $file = fopen("webdictionary.txt", "r") or die("Unable to open file!");
+        return fread($file, filesize($filePath));
+        fclose($file);
     }
 }
