@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.3.1.1
+-----------------
+ * Fixed webroot setting
+ 
 1.3.1
 -----------------
  * Add webroot setting

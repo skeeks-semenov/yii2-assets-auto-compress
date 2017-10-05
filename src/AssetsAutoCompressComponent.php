@@ -417,7 +417,7 @@ JS
                         $fileCode = substr($fileCode, 0, $pos);
                     }
 
-                    $fileCode = \Yii::getAlias('@webroot') . $fileCode;
+                    $fileCode = $this->webroot . $fileCode;
                     $contentFile = $this->readLocalFile( $fileCode );
 
                     /**\Yii::info("file: " . \Yii::getAlias(\Yii::$app->assetManager->basePath . $fileCode), self::class);*/
@@ -527,7 +527,7 @@ JS
                         $fileCodeLocal = substr($fileCodeLocal, 0, $pos);
                     }
 
-                    $fileCodeLocal = \Yii::getAlias('@webroot') . $fileCodeLocal;
+                    $fileCodeLocal = $this->webroot . $fileCodeLocal;
                     $contentTmp = trim($this->readLocalFile( $fileCodeLocal ));
 
                     //$contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) ));
