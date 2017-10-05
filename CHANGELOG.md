@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.3.1.2
+-----------------
+ * Fixed local read files
+ 
 1.3.1.1
 -----------------
  * Fixed webroot setting

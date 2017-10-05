@@ -660,16 +660,16 @@ JS
     public function readLocalFile($filePath)
     {
         if (YII_ENV == 'dev') {
-            \Yii::info("Read local files '{$filePath}'" . $response->content);
+            \Yii::info("Read local files '{$filePath}'");
         }
 
         if (!file_exists($filePath)) {
-            throw new \Exception("Read file error '{$file}'");
+            throw new \Exception("Read file error '{$filePath}'");
         }
 
         $file = fopen($filePath, "r");
         if (!$file) {
-            throw new \Exception("Unable to open file: '{$file}'");
+            throw new \Exception("Unable to open file: '{$filePath}'");
         }
         return fread($file, filesize($filePath));
         fclose($file);
