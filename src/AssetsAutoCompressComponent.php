@@ -522,12 +522,13 @@ JS
             {
                 if (Url::isRelative($fileCode))
                 {
+                    $fileCodeLocal = $fileCode;
                     if ($pos = strpos($fileCode, "?")) {
-                        $fileCode = substr($fileCode, 0, $pos);
+                        $fileCodeLocal = substr($fileCodeLocal, 0, $pos);
                     }
 
-                    $fileCode = \Yii::getAlias('@webroot') . $fileCode;
-                    $contentTmp = trim($this->readLocalFile( $fileCode ));
+                    $fileCodeLocal = \Yii::getAlias('@webroot') . $fileCodeLocal;
+                    $contentTmp = trim($this->readLocalFile( $fileCodeLocal ));
 
                     //$contentTmp         = trim($this->fileGetContents( Url::to(\Yii::getAlias($fileCode), true) ));
 
@@ -658,11 +659,18 @@ JS
      */
     public function readLocalFile($filePath)
     {
+        if (YII_ENV == 'dev') {
+            \Yii::info("Read local files '{$filePath}'" . $response->content);
+        }
+
         if (!file_exists($filePath)) {
             throw new \Exception("Read file error '{$file}'");
         }
 
-        $file = fopen("webdictionary.txt", "r") or die("Unable to open file!");
+        $file = fopen($filePath, "r");
+        if (!$file) {
+            throw new \Exception("Unable to open file: '{$file}'");
+        }
         return fread($file, filesize($filePath));
         fclose($file);
     }
