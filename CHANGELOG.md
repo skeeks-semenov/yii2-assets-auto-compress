@@ -3,6 +3,7 @@ CHANGELOG
 
 1.4.0.pre
 -----------------
+ * Using IFormatter interface
  * Using stable versions of dependencies
  
 1.3.1.2

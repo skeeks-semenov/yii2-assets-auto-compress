@@ -8,7 +8,7 @@
 
 namespace skeeks\yii2\assetsAuto;
 
-use skeeks\yii2\assetsAuto\components\HtmlCompressor;
+use skeeks\yii2\assetsAuto\vendor\HtmlCompressor;
 use yii\base\BootstrapInterface;
 use yii\base\Component;
 use yii\base\Event;

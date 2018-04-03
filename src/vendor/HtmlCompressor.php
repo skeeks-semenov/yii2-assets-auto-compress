@@ -1,16 +1,15 @@
 <?php
 /**
+ * @link https://cms.skeeks.com/
+ * @copyright Copyright (c) 2010 SkeekS
+ * @license https://cms.skeeks.com/license/
  * @author Semenov Alexander <semenov@skeeks.com>
- * @link https://skeeks.com/
- * @copyright (c) 2010 SkeekS
- * @date 16.09.2017
  */
-namespace skeeks\yii2\assetsAuto\components;
+namespace skeeks\yii2\assetsAuto\vendor;
 use yii\helpers\ArrayHelper;
 
 /**
- * Class HtmlCompressor
- * @package skeeks\yii2\assetsAuto\components
+ * @author Semenov Alexander <semenov@skeeks.com>
  */
 class HtmlCompressor
 {
@@ -29,9 +28,8 @@ class HtmlCompressor
      */
     public static function compress($data, $options = null)
     {
-        /*return (new static)
-            ->htmlCompress($data, $options);*/
-        return \Minify_HTML::minify($data, []);
+        return (new static)
+            ->htmlCompress($data, $options);
     }
     /**
      * HTML Compressor 1.0.1
