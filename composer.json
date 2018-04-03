@@ -2,9 +2,9 @@
 	"name": "skeeks/yii2-assets-auto-compress",
 	"description": "Automatically compile and merge files js + css + html in yii2 project",
 	"keywords": ["yii", "app", "skeeks", "sx", "framework", "js", "css", "assets", "auto assets"],
-    "homepage": "http://www.skeeks.com/",
+    "homepage": "https://www.skeeks.com/",
 	"type": "yii2-extension",
-	"license": "GPL-3.0+",
+	"license": "BSD-3-Clause",
 	"support": {
         "issues": "https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues",
         "source": "https://github.com/skeeks-semenov/yii2-assets-auto-compress",
@@ -25,9 +25,9 @@
 	"require": {
 		"yiisoft/yii2": "^2",
 		"yiisoft/yii2-httpclient": "^2",
-		"tedivm/jshrink": "*",
-		"natxet/cssmin": "*",
-		"mrclay/minify": "*"
+		"tedivm/jshrink": "^1.1.0",
+		"natxet/cssmin": "*^3.0.3",
+		"mrclay/minify": "^3.0.3"
 	},
     "autoload": {
         "psr-4": {
