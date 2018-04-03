@@ -29,8 +29,9 @@ class HtmlCompressor
      */
     public static function compress($data, $options = null)
     {
-        return (new static)
-            ->htmlCompress($data, $options);
+        /*return (new static)
+            ->htmlCompress($data, $options);*/
+        return \Minify_HTML::minify($data, []);
     }
     /**
      * HTML Compressor 1.0.1
