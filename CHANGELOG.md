@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.4.0.pre
+-----------------
+ * Using stable versions of dependencies
+ 
 1.3.1.2
 -----------------
  * Fixed local read files
