@@ -1,8 +1,51 @@
 CHANGELOG
 ==============
 
-1.4.0.pre
+1.5.pre
 -----------------
+ * JsMinFormatter
+ * CssMinFormatter
+ 
+1.4.0
+-----------------
+ * Use new config!
+ 
+Old config :
+```php
+'assetsAutoCompress' => [
+    'class'   => '\skeeks\yii2\assetsAuto\AssetsAutoCompressComponent',
+    
+    'htmlCompress'                  => true, //Deprecated!!!       
+    'htmlCompressOptions'           =>       //Deprecated!!!       
+    [
+        'extra' => false,      
+        'no-comments' => true 
+    ],   
+],
+```
+
+New config:
+```php
+'assetsAutoCompress' => [
+    'class'   => '\skeeks\yii2\assetsAuto\AssetsAutoCompressComponent',
+    'htmlFormatter' => [
+        //Enable compression html
+        'class'         => 'skeeks\yii2\assetsAuto\formatters\html\TylerHtmlCompressor',
+        'extra'         => false,       //use more compact algorithm
+        'noComments'    => true,        //cut all the html comments
+        'maxNumberRows' => 50000,       //The maximum number of rows that the formatter runs on
+    
+        //or
+    
+        'class' => 'skeeks\yii2\assetsAuto\formatters\html\MrclayHtmlCompressor',
+    
+        //or any other your handler implements skeeks\yii2\assetsAuto\IFormatter interface
+    
+        //or false
+    ],
+],
+```
+ 
  * New option maxNumberRows in TylerHtmlCompressor — the maximum number of rows that the formatter runs on
  * Fixed double html conversion
  * Created skeeks\yii2\assetsAuto\formatters\html\MrclayHtmlCompressor
