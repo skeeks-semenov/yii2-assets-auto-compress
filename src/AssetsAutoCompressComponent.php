@@ -621,7 +621,11 @@ JS
     protected function _processingHtml($html)
     {
         if ($this->htmlFormatter instanceof IFormatter) {
-            return $this->htmlFormatter->format($html);
+            $r = new \ReflectionClass($this->htmlFormatter);
+            \Yii::beginProfile('Format html: ' . $r->getName());
+                $result = $this->htmlFormatter->format($html);
+            \Yii::endProfile('Format html: ' . $r->getName());
+            return $result;
         }
 
         \Yii::warning("Html formatter error");
