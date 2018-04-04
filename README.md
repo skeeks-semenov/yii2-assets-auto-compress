@@ -81,12 +81,22 @@ How to use
             'jsFileCompress'                => true,        //Enable compression and processing js before saving a file
             'jsFileCompressFlaggedComments' => true,        //Cut comments during processing js
             
-            'htmlCompress'                  => true,        //Enable compression html
             'noIncludeJsFilesOnPjax'        => true,        //Do not connect the js files when all pjax requests
-            'htmlCompressOptions'           =>              //options for compressing output result
+            
+            'htmlFormatter'                 =>              //options for compressing output result
             [
-                'extra' => false,        //use more compact algorithm
-                'no-comments' => true   //cut all the html comments
+                //Enable compression html
+                'class' => 'skeeks\yii2\assetsAuto\formatters\html\TylerHtmlCompressor'
+                'extra' => false,      //use more compact algorithm
+                'noComments' => true   //cut all the html comments
+                
+                //or
+                
+                'class' => 'skeeks\yii2\assetsAuto\formatters\html\MrclayHtmlCompressor'
+                
+                //or any other your handler implements skeeks\yii2\assetsAuto\IFormatter interface
+                
+                //or false
             ],     
         ],
     //....

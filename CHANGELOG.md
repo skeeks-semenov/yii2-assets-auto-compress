@@ -3,6 +3,12 @@ CHANGELOG
 
 1.4.0.pre
 -----------------
+ * Fixed double html conversion
+ * Created skeeks\yii2\assetsAuto\formatters\html\MrclayHtmlCompressor
+ * Created skeeks\yii2\assetsAuto\formatters\html\TylerHtmlCompressor
+ * Added htmlFormatter config option
+ * Deprecated htmlCompressOptions config option
+ * Deprecated htmlCompress config option
  * Using IFormatter interface
  * Using stable versions of dependencies
  

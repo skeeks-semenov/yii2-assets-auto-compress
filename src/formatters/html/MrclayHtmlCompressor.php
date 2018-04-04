@@ -17,9 +17,13 @@ use yii\base\Component;
 class MrclayHtmlCompressor extends Component implements IFormatter
 {
 
+    /**
+     * @param string $html
+     * @return string
+     */
     public function format($html)
     {
-        return \Minify_HTML::minify($html, []);
+        return \Minify_HTML::minify((string) $html, []);
     }
 
 }

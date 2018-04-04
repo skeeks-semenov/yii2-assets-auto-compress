@@ -12,6 +12,7 @@ use skeeks\yii2\assetsAuto\vendor\HtmlCompressor;
 use yii\base\BootstrapInterface;
 use yii\base\Component;
 use yii\base\Event;
+use yii\base\InvalidConfigException;
 use yii\helpers\ArrayHelper;
 use yii\helpers\FileHelper;
 use yii\helpers\Html;
@@ -24,7 +25,8 @@ use yii\web\View;
 /**
  * Automatically compile and merge files js + css + html in yii2 project
  *
- * @property string $webroot;
+ * @property string     $webroot;
+ * @property IFormatter $htmlFormatter;
  *
  * @author Semenov Alexander <semenov@skeeks.com>
  */
@@ -102,6 +104,9 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $jsFileCompile = true;
 
+    /**
+     * @var array
+     */
     public $jsOptions = [];
 
     /**
@@ -122,34 +127,51 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $jsFileCompressFlaggedComments = true;
 
-
-    /**
-     * Enable compression html
-     * @var bool
-     */
-    public $htmlCompress = true;
-    /**
-     * @var array options for compressing output result
-     *   * extra - use more compact algorithm
-     *   * no-comments - cut all the html comments
-     */
-    public $htmlCompressOptions = [
-        'extra'       => false,
-        'no-comments' => true,
-    ];
-
-
     /**
      * Do not connect the js files when all pjax requests.
      * @var bool
      */
     public $noIncludeJsFilesOnPjax = true;
-
+    /**
+     * @var bool|array|string|IFormatter
+     */
+    protected $_htmlFormatter = false;
     /**
      * @var string
      */
     protected $_webroot = '@webroot';
+    /**
+     * @return IFormatter|bool
+     */
+    public function getHtmlFormatter()
+    {
+        return $this->_htmlFormatter;
+    }
+    /**
+     * @param bool|array|string|IFormatter $htmlFormatter
+     * @return $this
+     * @throws InvalidConfigException
+     */
+    public function setHtmlFormatter($htmlFormatter = false)
+    {
+        if (is_array($htmlFormatter) || $htmlFormatter === false) {
+            $this->_htmlFormatter = $htmlFormatter;
+        } elseif (is_string($htmlFormatter)) {
+            $this->_htmlFormatter = [
+                'class' => $htmlFormatter,
+            ];
+        } elseif (is_object($htmlFormatter) && $htmlFormatter instanceof IFormatter) {
+            $this->_htmlFormatter = $htmlFormatter;
+        } else {
+            throw new InvalidConfigException("Bad html formatter!");
+        }
 
+        if (is_array($this->_htmlFormatter)) {
+            $this->_htmlFormatter = \Yii::createObject($this->_htmlFormatter);
+        }
+
+        return $this;
+    }
     /**
      * @return bool|string
      */
@@ -196,14 +218,14 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             $app->response->on(\yii\web\Response::EVENT_BEFORE_SEND, function (\yii\base\Event $event) use ($app) {
                 $response = $event->sender;
 
-                if ($this->enabled && $this->htmlCompress && $response->format == \yii\web\Response::FORMAT_HTML && !$app->request->isAjax && !$app->request->isPjax) {
+                if ($this->enabled && ($this->htmlFormatter instanceof IFormatter)  && $response->format == \yii\web\Response::FORMAT_HTML && !$app->request->isAjax && !$app->request->isPjax) {
                     if (!empty($response->data)) {
                         $response->data = $this->_processingHtml($response->data);
                     }
 
-                    if (!empty($response->content)) {
+                    /*if (!empty($response->content)) {
                         $response->content = $this->_processingHtml($response->content);
-                    }
+                    }*/
                 }
             });
         }
@@ -598,8 +620,54 @@ JS
      */
     protected function _processingHtml($html)
     {
-        //$options = ['no-comments' => true];
-        $options = $this->htmlCompressOptions;
-        return HtmlCompressor::compress($html, $options);
+        if ($this->htmlFormatter instanceof IFormatter) {
+            return $this->htmlFormatter->format($html);
+        }
+
+        \Yii::warning("Html formatter error");
+
+        return $html;
+    }
+
+
+    /**
+     * @deprecated >= 1.4
+     * @param $value
+     * @return $this
+     */
+    public function setHtmlCompress($value)
+    {
+        return $this;
+    }
+
+    /**
+     * @deprecated >= 1.4
+     * @param $value
+     * @return $this
+     */
+    public function getHtmlCompress()
+    {
+        return $this;
+    }
+    /**
+     * @deprecated >= 1.4
+     * @param $value array options for compressing output result
+     *   * extra - use more compact algorithm
+     *   * no-comments - cut all the html comments
+     * @return $this
+     */
+    public function setHtmlCompressOptions($value)
+    {
+        return $this;
+    }
+
+    /**
+     * @deprecated >= 1.4
+     * @param $value
+     * @return $this
+     */
+    public function getHtmlCompressOptions()
+    {
+        return $this;
     }
 }
