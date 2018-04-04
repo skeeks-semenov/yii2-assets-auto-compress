@@ -3,6 +3,7 @@ CHANGELOG
 
 1.4.0.pre
 -----------------
+ * New option maxNumberRows in TylerHtmlCompressor — the maximum number of rows that the formatter runs on
  * Fixed double html conversion
  * Created skeeks\yii2\assetsAuto\formatters\html\MrclayHtmlCompressor
  * Created skeeks\yii2\assetsAuto\formatters\html\TylerHtmlCompressor
