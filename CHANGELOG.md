@@ -1,8 +1,9 @@
 CHANGELOG
 ==============
 
-1.5.pre
+1.4.1
 -----------------
+ * Logs
  * JsMinFormatter
  * CssMinFormatter
  

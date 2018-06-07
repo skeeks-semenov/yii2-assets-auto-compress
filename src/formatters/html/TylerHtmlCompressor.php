@@ -49,9 +49,9 @@ class TylerHtmlCompressor extends Component implements IFormatter
 
         \Yii::beginProfile('countHtmlRows');
             $count = substr_count($html, "\n") + 1;
-            \Yii::info('Number of HTML rows: ' . $count);
+            \Yii::info('Number of HTML rows: ' . $count, self::class);
             if ($count > $this->maxNumberRows) {
-                \Yii::info("Not run: " . self::class . ". Too many lines: {$count}. Can be no more than: {$this->maxNumberRows}");
+                \Yii::info("Not run: " . self::class . ". Too many lines: {$count}. Can be no more than: {$this->maxNumberRows}", self::class);
                 return $html;
             }
 
