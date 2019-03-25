@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.4.2.pre
+-----------------
+ * Fixed: https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/51
+ 
 1.4.1
 -----------------
  * Logs
