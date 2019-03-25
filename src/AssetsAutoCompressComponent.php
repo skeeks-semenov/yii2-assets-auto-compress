@@ -246,7 +246,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             \Yii::endProfile('Compress js files');
         }
 
-        //Компиляция js кода который встречается на странице
+        //Compiling js code that is found in the html code of the page.
         if ($view->js && $this->jsCompress) {
             \Yii::beginProfile('Compress js code');
             foreach ($view->js as $pos => $parts) {
@@ -258,7 +258,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         }
 
 
-        //Компиляция css файлов который встречается на странице
+        //Compiling css files
         if ($view->cssFiles && $this->cssFileCompile) {
             \Yii::beginProfile('Compress css files');
 
@@ -266,7 +266,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             \Yii::endProfile('Compress css files');
         }
 
-        //Компиляция css файлов который встречается на странице
+        //Compiling css code that is found in the html code of the page.
         if ($view->css && $this->cssCompress) {
             \Yii::beginProfile('Compress css code');
 
@@ -274,15 +274,6 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
             \Yii::endProfile('Compress css code');
         }
-        //Компиляция css файлов который встречается на странице
-        if ($view->css && $this->cssCompress) {
-            \Yii::beginProfile('Compress css code');
-
-            $view->css = $this->_processingCss($view->css);
-
-            \Yii::endProfile('Compress css code');
-        }
-
 
         //Перенос файлов css вниз страницы, где файлы js View::POS_END
         if ($view->cssFiles && $this->cssFileBottom) {
