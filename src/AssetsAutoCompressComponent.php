@@ -434,7 +434,10 @@ JS
         if (!$file) {
             throw new \Exception("Unable to open file: '{$filePath}'");
         }
-        return fread($file, filesize($filePath));
+        $filesSize = filesize($filePath);
+        if($filesSize){
+            return fread($file, $filesSize);
+        }
         fclose($file);
     }
     /**
