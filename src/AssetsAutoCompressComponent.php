@@ -557,7 +557,7 @@ JS
         }
 
         if ($resultContent) {
-            $content = implode($resultContent, "\n");
+            $content = implode("\n", $resultContent);
             if (!is_dir($rootDir)) {
                 if (!FileHelper::createDirectory($rootDir, 0777)) {
                     return $files;
