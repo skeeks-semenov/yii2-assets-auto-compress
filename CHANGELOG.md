@@ -1,6 +1,11 @@
 CHANGELOG
 ==============
 
+1.4.3
+-----------------
+ * New option cssFileCompileByGroups — Enables the compilation of files in groups rather than in a single file. Works only when the $cssFileCompile option is enabled
+ * New option jsFileCompileByGroups — Enables the compilation of files in groups rather than in a single file. Works only when the $jsFileCompile option is enabled
+ 
 1.4.2
 -----------------
  * Fixed: https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/51
