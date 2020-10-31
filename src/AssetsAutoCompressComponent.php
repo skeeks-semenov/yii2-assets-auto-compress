@@ -461,7 +461,7 @@ JS
             $useFunction = function_exists('curl_init') ? 'curl extension' : 'php file_get_contents';
             $filesString = implode(', ', array_keys($files));
 
-            \Yii::info("Create js file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::className());
+            \Yii::info("Create js file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::class);
 
             $file = fopen($rootUrl, "w");
             fwrite($file, $content);
@@ -663,7 +663,7 @@ JS
             $useFunction = function_exists('curl_init') ? 'curl extension' : 'php file_get_contents';
             $filesString = implode(', ', array_keys($files));
 
-            \Yii::info("Create css file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::className());
+            \Yii::info("Create css file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::class);
 
 
             $file = fopen($rootUrl, "w");
@@ -694,7 +694,7 @@ JS
             }, $value);
         }
 
-        $css = implode($newCss, "\n");
+        $css = implode("\n", $newCss);
         $css = \CssMin::minify($css);
         return [md5($css) => "<style>".$css."</style>"];
     }
