@@ -1,6 +1,11 @@
 CHANGELOG
 ==============
 
+1.4.3.1
+-----------------
+ * Fixed: https://github.com/skeeks-semenov/yii2-assets-auto-compress/pull/60
+ * Fixed: https://github.com/skeeks-semenov/yii2-assets-auto-compress/issues/59
+ 
 1.4.3
 -----------------
  * New option cssFileCompileByGroups — Enables the compilation of files in groups rather than in a single file. Works only when the $cssFileCompile option is enabled
