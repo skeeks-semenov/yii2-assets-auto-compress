@@ -1,6 +1,11 @@
 CHANGELOG
 ==============
 
+1.4.3.2
+-----------------
+ * Fixed option noIncludeJsFilesOnPjax = true
+ * Add option noIncludeCssFilesOnPjax = true — Do not connect the css files when all pjax requests when enabled cssFileCompile
+
 1.4.3.1
 -----------------
  * Fixed: https://github.com/skeeks-semenov/yii2-assets-auto-compress/pull/60

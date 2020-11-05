@@ -74,7 +74,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
 
     /**
      * Enables the compilation of files in groups rather than in a single file. Works only when the $cssFileCompile option is enabled
-     * @var bool 
+     * @var bool
      */
     public $cssFileCompileByGroups = false;
 
@@ -139,10 +139,16 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
     public $jsFileCompressFlaggedComments = true;
 
     /**
-     * Do not connect the js files when all pjax requests.
+     * Do not connect the js files when all pjax requests when enabled jsFileCompile
      * @var bool
      */
     public $noIncludeJsFilesOnPjax = true;
+
+    /**
+     * Do not connect the css files when all pjax requests when enabled cssFileCompile
+     * @var bool
+     */
+    public $noIncludeCssFilesOnPjax = true;
     /**
      * @var bool|array|string|IFormatter
      */
@@ -220,8 +226,15 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 }
 
                 //TODO:: Think about it
-                if ($this->enabled && $app->request->isPjax && $this->noIncludeJsFilesOnPjax) {
-                    \Yii::$app->view->jsFiles = null;
+                if ($this->enabled && $app->request->isPjax) {
+
+                    if ($this->noIncludeJsFilesOnPjax && $this->jsFileCompile) {
+                        \Yii::$app->view->jsFiles = null;
+                    }
+
+                    if ($this->noIncludeCssFilesOnPjax && $this->cssFileCompile) {
+                        \Yii::$app->view->cssFiles = null;
+                    }
                 }
             });
 
@@ -233,10 +246,6 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                     if (!empty($response->data)) {
                         $response->data = $this->_processingHtml($response->data);
                     }
-
-                    /*if (!empty($response->content)) {
-                        $response->content = $this->_processingHtml($response->content);
-                    }*/
                 }
             });
         }
@@ -345,14 +354,14 @@ JS
 
         $result = [];
         $groupedFiles = $this->_getGroupedFiles($files);
-        foreach ($groupedFiles as $files)
-        {
+        foreach ($groupedFiles as $files) {
             $resultGroup = $this->_processingJsFiles($files);
             $result = ArrayHelper::merge($result, $resultGroup);
         }
-        
+
         return $result;
-        echo "<pre><code>" . print_r($result, true); die;
+        echo "<pre><code>".print_r($result, true);
+        die;
 
     }
 
@@ -366,7 +375,7 @@ JS
         foreach ($files as $fileCode => $fileTag) {
             list($one, $two, $key) = explode("/", $fileCode);
 
-            $counter ++;
+            $counter++;
 
             if ($key != $lastKey && $counter > 1) {
                 $result[] = $tmpData;
@@ -550,7 +559,7 @@ JS
 
         return $result;
     }
-    
+
     /**
      * @param array $files
      */
@@ -562,16 +571,15 @@ JS
 
         $result = [];
         $groupedFiles = $this->_getGroupedFiles($files);
-        foreach ($groupedFiles as $files)
-        {
+        foreach ($groupedFiles as $files) {
             $resultGroup = $this->_processingCssFiles($files);
             $result = ArrayHelper::merge($result, $resultGroup);
         }
-        
+
         return $result;
 
     }
-    
+
     /**
      * @param array $files
      * @return array
