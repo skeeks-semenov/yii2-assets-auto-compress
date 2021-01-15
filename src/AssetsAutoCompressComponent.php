@@ -8,6 +8,7 @@
 
 namespace skeeks\yii2\assetsAuto;
 
+use MatthiasMullie\Minify;
 use yii\base\BootstrapInterface;
 use yii\base\Component;
 use yii\base\Event;
@@ -634,9 +635,9 @@ JS
                     unset($fileCodeTmp[count($fileCodeTmp) - 1]);
                     $prependRelativePath = implode("/", $fileCodeTmp)."/";
 
-                    $contentTmp = \Minify_CSS::minify($contentTmp, [
-                        "prependRelativePath" => $prependRelativePath,
+                    $contentTmp = $this->fixRelativeInCSS($contentTmp, $this->webroot . $prependRelativePath, $rootDir);
 
+                    $contentTmp = \Minify_CSS::minify($contentTmp, [
                         'compress'         => true,
                         'removeCharsets'   => true,
                         'preserveComments' => true,
@@ -668,7 +669,8 @@ JS
             }
 
             if ($this->cssFileCompress) {
-                $content = \CssMin::minify($content);
+                $content = (new Minify\CSS($content))->minify();
+                //$content = \CssMin::minify($content);
             }
 
             $page = \Yii::$app->request->absoluteUrl;
@@ -741,6 +743,125 @@ JS
     protected function getFileCode($fileCode)
     {
         return !empty(\Yii::$app->request->getBaseUrl()) ? str_replace(\Yii::$app->request->getBaseUrl(), '', $fileCode) : $fileCode;
+    }
+
+    /**
+     * CSS fix where relative path starts with dots
+     *
+     * @param  string $code     CSS code
+     * @param  string $old_path Full path to the source file
+     * @param  string $new_path Full path to the final file
+     *
+     * @return string CSS with corrected paths
+     */
+    protected function fixRelativeInCSS($code, $old_path, $new_path)
+    {
+        $list = [];
+
+        // Find patterns
+        $pattern = '/@import\\s+([^)]*)/Us';
+        preg_match_all($pattern, $code, $list1);
+        if (isset($list1[1]) && !empty($list1[1])) foreach ($list1[1] as $item) { $list[] = trim($item, '\'" '); }
+
+        $pattern = '/url\\(([^)]*)\\)/Us';
+        preg_match_all($pattern, $code, $list2);
+        if (isset($list2[1]) && !empty($list2[1])) foreach ($list2[1] as $item) { $list[] = trim($item, '\'" '); }
+
+        // We leave only paths with points
+        foreach ($list as $key => $value) { if (!preg_match('/^[\.]*\//', $value)) unset($list[$key]); }
+
+        // Determining where paths start to differ
+        $old_path = explode('/', rtrim(str_replace('\\', '/', $old_path), '/'));
+        $new_path = explode('/', rtrim(str_replace('\\', '/', $new_path), '/'));
+
+        $f = count($old_path) > count($new_path) ? $old_path : $new_path;
+        $eq = 0;
+
+        /**
+         * Example:
+         * $new_path = /var/www/site/web/assets/css-compress
+         * $old_path = /var/www/site/web/css
+         *
+         * $eq = 4
+         */
+        foreach ($f as $key => $value) { if (isset($new_path[$key]) && isset($old_path[$key]) && $new_path[$key] === $old_path[$key]) $eq = $key; }
+
+        // Correcting relative paths for the new location
+        foreach ($list as $item)
+        {
+            $e = explode('/', $item);
+            $pos = count($old_path) - 1;
+
+            /**
+             * Example 1:
+             * $item = ../images/image1.png
+             *
+             * 1 iteration: $pos = 5 or 'css'
+             * 2 iteration: $pos = 4 or 'web'
+             *
+             * Example 2:
+             * $item = ../../images/image1.png
+             *
+             * 1 iteration: $pos = 5 or 'css'
+             * 2 iteration: $pos = 4 or 'web'
+             * 3 iteration: $pos = 3 or 'site'
+             *
+             * Example 3:
+             * $item = images/image1.png
+             *
+             * $pos = 5 or 'css'
+             */
+            foreach ($e as $key => $i)
+            {
+                if ($i === '..')
+                {
+                    $pos--;
+                    unset($e[$key]);
+                }
+            }
+
+            $n = count($new_path) - 1;
+
+            if ($pos <= $eq)
+            {
+                /**
+                 * Example 1:
+                 * for /var/www/site/web/css url = ../images/image1.png
+                 *
+                 * $n = 7 - 1 - 4 = 2
+                 *
+                 * then for /var/www/site/web/assets/css-compress $new_item = ../../images/image1.png
+                 *
+                 * Example 2:
+                 * for /var/www/site/web/css url = ../../images/image1.png
+                 *
+                 * $n = 7 - 1 - 3 = 3
+                 *
+                 * then for /var/www/site/web/assets/css-compress $new_item = ../../../images/image1.png
+                 */
+                $n -= $pos;
+                $prefix = str_repeat('../', $n);
+            }
+            else
+            {
+                /**
+                 * Example:
+                 * for /var/www/site/web/css url = images/image1.png
+                 *
+                 * $n = 7 - 1 - 4 = 2
+                 *
+                 * then for /var/www/site/web/assets/css-compress $new_item = ../../css/images/image1.png
+                 */
+                $n -= $eq;
+                $prefix = str_repeat('../', $n) . end($old_path);
+            }
+
+            $new_item = $prefix . implode('/', $e);
+
+            $code = str_replace($item, $new_item, $code);
+        }
+
+        return $code;
     }
 
     /**
