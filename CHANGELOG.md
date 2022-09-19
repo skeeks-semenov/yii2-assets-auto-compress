@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.4.4
+-----------------
+ * Variables minifier filter default false
+
 1.4.3.2
 -----------------
  * Fixed option noIncludeJsFilesOnPjax = true

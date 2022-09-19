@@ -259,6 +259,9 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
         //echo "<pre><code>" . print_r($view->jsFiles, true);die;
         if ($view->jsFiles && $this->jsFileCompile) {
             \Yii::beginProfile('Compress js files');
+            /*if (YII_ENV_DEV) {
+                echo "<pre><code>" . print_r($view->jsFiles, true);
+            }*/
             foreach ($view->jsFiles as $pos => $files) {
                 if ($files) {
                     if ($this->jsFileCompileByGroups) {
@@ -270,7 +273,10 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
             }
             \Yii::endProfile('Compress js files');
         }
-        //echo "<pre><code>" . print_r($view->jsFiles, true);die;
+        /*if (YII_ENV_DEV) {
+            echo "<pre><code>" . print_r($view->jsFiles, true);die;
+        }*/
+        
 
         //Compiling js code that is found in the html code of the page.
         if ($view->js && $this->jsCompress) {
@@ -354,14 +360,15 @@ JS
 
         $result = [];
         $groupedFiles = $this->_getGroupedFiles($files);
+        /*print_r($groupedFiles);die;*/
         foreach ($groupedFiles as $files) {
             $resultGroup = $this->_processingJsFiles($files);
             $result = ArrayHelper::merge($result, $resultGroup);
         }
 
         return $result;
-        echo "<pre><code>".print_r($result, true);
-        die;
+        /*echo "<pre><code>".print_r($result, true);
+        die;*/
 
     }
 
@@ -630,6 +637,7 @@ JS
                     unset($fileCodeTmp[count($fileCodeTmp) - 1]);
                     $prependRelativePath = implode("/", $fileCodeTmp)."/";
 
+                    //print_r($prependRelativePath);die;
                     $contentTmp = \Minify_CSS::minify($contentTmp, [
                         "prependRelativePath" => $prependRelativePath,
 
@@ -664,7 +672,7 @@ JS
             }
 
             if ($this->cssFileCompress) {
-                $content = \CssMin::minify($content);
+                $content = \CssMin::minify($content, [], ["Variables" => false]);
             }
 
             $page = \Yii::$app->request->absoluteUrl;
@@ -703,7 +711,7 @@ JS
         }
 
         $css = implode("\n", $newCss);
-        $css = \CssMin::minify($css);
+        $css = \CssMin::minify($css, [], ["Variables" => false]);
         return [md5($css) => "<style>".$css."</style>"];
     }
 
