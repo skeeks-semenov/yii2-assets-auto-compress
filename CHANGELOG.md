@@ -1,6 +1,10 @@
 CHANGELOG
 ==============
 
+1.4.5
+-----------------
+ * php 8.2
+
 1.4.4
 -----------------
  * Variables minifier filter default false
