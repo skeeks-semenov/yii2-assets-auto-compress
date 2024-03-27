@@ -243,7 +243,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 $response = $event->sender;
 
                 if ($this->enabled && ($this->htmlFormatter instanceof IFormatter) && $response->format == \yii\web\Response::FORMAT_HTML && !$app->request->isAjax && !$app->request->isPjax) {
-                    if (!empty($response->data)) {
+                    if (!empty($response->data) && is_string($response->data)) {
                         $response->data = $this->_processingHtml($response->data);
                     }
                 }
