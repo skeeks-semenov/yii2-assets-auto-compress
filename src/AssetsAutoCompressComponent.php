@@ -638,7 +638,7 @@ JS
                     $prependRelativePath = implode("/", $fileCodeTmp)."/";
 
                     //print_r($prependRelativePath);die;
-                    $contentTmp = \Minify_CSS::minify($contentTmp, [
+                    $contentTmp = \Minify_CSSmin::minify($contentTmp, [
                         "prependRelativePath" => $prependRelativePath,
 
                         'compress'         => true,
