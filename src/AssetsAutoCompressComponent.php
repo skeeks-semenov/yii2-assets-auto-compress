@@ -226,7 +226,7 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
                 }
 
                 //TODO:: Think about it
-                if ($this->enabled && $app->request->isPjax) {
+                if ($this->enabled && $app->request->isPjax && !$app->request->headers->get('X-Pjax-Lazy-Load')) {
 
                     if ($this->noIncludeJsFilesOnPjax && $this->jsFileCompile) {
                         \Yii::$app->view->jsFiles = null;
