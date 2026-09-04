@@ -445,12 +445,18 @@ JS
                     /**\Yii::info("file: " . \Yii::getAlias(\Yii::$app->assetManager->basePath . $fileCode), self::class);*/
                     //$contentFile = $this->fileGetContents( Url::to(\Yii::getAlias($tmpFileCode), true) );
                     //$contentFile = $this->fileGetContents( \Yii::$app->assetManager->basePath . $fileCode );
-                    $resultContent[] = trim($contentFile)."\n;";;
+                    $resultContent[] = [
+                        'content'    => trim($contentFile)."\n;",
+                        'minified'   => $this->_isMinifiedJsFile($fileCode),
+                    ];
                 } else {
                     if ($this->jsFileRemouteCompile) {
                         //Try to download the deleted file
                         $contentFile = $this->fileGetContents($fileCode);
-                        $resultContent[] = trim($contentFile);
+                        $resultContent[] = [
+                            'content'    => trim($contentFile),
+                            'minified'   => $this->_isMinifiedJsFile($fileCode),
+                        ];
                     } else {
                         $resultFiles[$fileCode] = $fileTag;
                     }
@@ -462,14 +468,41 @@ JS
         }
 
         if ($resultContent) {
-            $content = implode(";\n", $resultContent);
+            // Large vendor bundles are commonly shipped already minified. Running
+            // them through JShrink again is expensive and can hit PHP's execution
+            // time limit without providing a meaningful size reduction.
+            $hasMinifiedFiles = false;
+            foreach ($resultContent as $resultContentPart) {
+                if ($resultContentPart['minified']) {
+                    $hasMinifiedFiles = true;
+                    break;
+                }
+            }
+
+            if ($this->jsFileCompress && $hasMinifiedFiles) {
+                foreach ($resultContent as &$resultContentPart) {
+                    if (!$resultContentPart['minified']) {
+                        $resultContentPart['content'] = \JShrink\Minifier::minify(
+                            $resultContentPart['content'],
+                            ['flaggedComments' => $this->jsFileCompressFlaggedComments]
+                        );
+                    }
+                }
+                unset($resultContentPart);
+            }
+
+            $contentParts = [];
+            foreach ($resultContent as $resultContentPart) {
+                $contentParts[] = $resultContentPart['content'];
+            }
+            $content = implode(";\n", $contentParts);
             if (!is_dir($rootDir)) {
                 if (!FileHelper::createDirectory($rootDir, 0777)) {
                     return $files;
                 }
             }
 
-            if ($this->jsFileCompress) {
+            if ($this->jsFileCompress && !$hasMinifiedFiles) {
                 $content = \JShrink\Minifier::minify($content, ['flaggedComments' => $this->jsFileCompressFlaggedComments]);
             }
 
@@ -493,6 +526,18 @@ JS
             return $files;
         }
     }
+
+    /**
+     * @param string $fileCode
+     * @return bool
+     */
+    protected function _isMinifiedJsFile($fileCode)
+    {
+        $path = parse_url($fileCode, PHP_URL_PATH);
+
+        return is_string($path) && (bool)preg_match('/\.min\.js$/i', $path);
+    }
+
     /**
      * @return string
      */
