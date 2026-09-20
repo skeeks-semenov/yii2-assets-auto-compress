@@ -418,6 +418,7 @@ JS
             if (!$this->jsFileRemouteCompile) {
                 foreach ($files as $fileCode => $fileTag) {
                     if (!Url::isRelative($fileCode)) {
+                        $fileCode = $this->getFileCode($fileCode);
                         $resultFiles[$fileCode] = $fileTag;
                     }
                 }
@@ -436,6 +437,7 @@ JS
             foreach ($files as $fileCode => $fileTag) {
                 if (Url::isRelative($fileCode)) {
                     if ($pos = strpos($fileCode, "?")) {
+                        $fileCode = $this->getFileCode($fileCode);
                         $fileCode = substr($fileCode, 0, $pos);
                     }
 
@@ -652,6 +654,7 @@ JS
             if (!$this->cssFileRemouteCompile) {
                 foreach ($files as $fileCode => $fileTag) {
                     if (!Url::isRelative($fileCode)) {
+                        $fileCode = $this->getFileCode($fileCode);
                         $resultFiles[$fileCode] = $fileTag;
                     }
                 }
@@ -668,6 +671,7 @@ JS
             $resultFiles = [];
             foreach ($files as $fileCode => $fileTag) {
                 if (Url::isRelative($fileCode)) {
+                    $fileCode = $this->getFileCode($fileCode);
                     $fileCodeLocal = $fileCode;
                     if ($pos = strpos($fileCode, "?")) {
                         $fileCodeLocal = substr($fileCodeLocal, 0, $pos);
@@ -779,6 +783,18 @@ JS
         return $html;
     }
 
+    /**
+     * Fix for Yii version 2.0.39 and higher if the project has a non-empty baseUrl
+     *
+     * @param  string $fileCode Path to file
+     *
+     * @return string
+     * @link   https://github.com/yiisoft/yii2/issues/18414
+     */
+    protected function getFileCode($fileCode)
+    {
+        return !empty(\Yii::$app->request->getBaseUrl()) ? str_replace(\Yii::$app->request->getBaseUrl(), '', $fileCode) : $fileCode;
+    }
 
     /**
      * @param $value
