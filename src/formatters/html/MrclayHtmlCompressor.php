@@ -23,6 +23,13 @@ class MrclayHtmlCompressor extends Component implements IFormatter
      */
     public function format($html)
     {
+        if (!class_exists('\Minify_HTML')) {
+            throw new \yii\base\InvalidConfigException(
+                'MrclayHtmlCompressor requires the optional mrclay/minify package. '
+                . 'Install it explicitly or use TylerHtmlCompressor.'
+            );
+        }
+
         return \Minify_HTML::minify((string) $html, []);
     }
 

@@ -26,9 +26,11 @@
 		"yiisoft/yii2": "^2",
 		"yiisoft/yii2-httpclient": "^2",
 		"tedivm/jshrink": "v1.6.6",
-		"skeeks/cssmin": "^1.0",
-		"mrclay/minify": "^3.0.3"
+		"skeeks/cssmin": "^1.0"
 	},
+    "suggest": {
+        "mrclay/minify": "Only for the optional legacy MrclayHtmlCompressor; not required for CSS or the default HTML formatter."
+    },
     "autoload": {
         "psr-4": {
             "skeeks\\yii2\\assetsAuto\\": "src/"

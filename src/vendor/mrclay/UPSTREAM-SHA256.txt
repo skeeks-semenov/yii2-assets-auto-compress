@@ -1,0 +1,4 @@
+lib/Minify/CommentPreserver.php  44a1f4de3e1de9169a342becc5415c3a14b2b6225ff717c65559e46d1bc4b38c
+lib/Minify/CSS.php  bcd975c4ebdc3de756a27602eb33033255783267d9e93e3ec8e5e72ba9378815
+lib/Minify/CSS/Compressor.php  28cb1201e7e082d2b9f4ee6532ca76bdd769919c37af8e9720b087cec62cba3d
+lib/Minify/CSS/UriRewriter.php  00d8a6b2ee94d160de0357e9dd0d7fd79aa1478079319f9b6852f502a16f71ed

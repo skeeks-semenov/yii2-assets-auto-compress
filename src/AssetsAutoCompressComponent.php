@@ -683,7 +683,7 @@ JS
                     $prependRelativePath = implode("/", $fileCodeTmp)."/";
 
                     //print_r($prependRelativePath);die;
-                    $contentTmp = \Minify_CSS::minify($contentTmp, [
+                    $contentTmp = \skeeks\yii2\assetsAuto\vendor\mrclay\CSS::minify($contentTmp, [
                         "prependRelativePath" => $prependRelativePath,
 
                         'compress'         => true,

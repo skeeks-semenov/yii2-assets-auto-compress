@@ -145,3 +145,15 @@ ___
 <i>SkeekS CMS (Yii2) — fast, simple, effective!</i>  
 [skeeks.com](https://skeeks.com) | [cms.skeeks.com](https://cms.skeeks.com)
 
+
+CSS: отказ от обязательного mrclay/minify
+---------------------------------------
+
+CSS-обработка перенесена из mrclay/minify 3.0.14 в отдельную папку нашего пакета
+без изменения алгоритмов. Это убирает обязательную цепочку к abandoned-пакету
+marcusschwarz/lesserphp, который не нужен для обработки CSS. Лицензия и авторство
+сохранены. Причины, состав, ограничения, обновление сайтов и будущий план перехода
+на matthiasmullie/minify описаны в [документации](src/vendor/mrclay/README.md).
+
+Важно: старый альтернативный MrclayHtmlCompressor требует явной установки
+mrclay/minify; основной TylerHtmlCompressor этой зависимости не требует.
