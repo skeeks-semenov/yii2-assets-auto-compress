@@ -76,7 +76,8 @@ class HtmlCompressor
         $inside_pre = false;
         $inside_textarea = false;
         $bytecount = 0;
-        while ($line = $this->getLine($data)) {
+        $offset = 0;
+        while ($line = $this->getLine($data, $offset)) {
             $bytecount += strlen($line);
             if ($inside_pre) {
                 list($line, $inside_pre) = $this->checkInsidePre($line);
@@ -162,19 +163,29 @@ class HtmlCompressor
      * @param $data
      * @return bool|string
      */
-    private function getLine(&$data)
+    private function getLine(&$data, &$offset = null)
     {
         if (is_resource($data)) {
             return fgets($data);
         }
         if (is_string($data)) {
-            if (strlen($data) > 0) {
-                $pos = strpos($data, "\n");
-                $return = substr($data, 0, $pos) . "\n";
-                $data = substr($data, $pos + 1);
+            // The compressor advances an offset instead of copying the entire
+            // remaining document for every line. Keep the old consuming mode
+            // for the deprecated get_line() wrapper.
+            $consume = $offset === null;
+            $start = $consume ? 0 : $offset;
+            if ($start < strlen($data)) {
+                $pos = strpos($data, "\n", $start);
+                if ($pos === false) {
+                    $pos = strlen($data);
+                }
+                $return = substr($data, $start, $pos - $start) . "\n";
+                if ($consume) {
+                    $data = substr($data, $pos + 1);
+                } else {
+                    $offset = $pos + 1;
+                }
                 return $return;
-            } else {
-                return false;
             }
         }
         return false;
