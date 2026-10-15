@@ -24,8 +24,15 @@ $cases = [
     ['a{background:url(../img/a.png)}', ['currentDir' => '/var/www/css', 'docRoot' => '/var/www'], 'a{background:url(/img/a.png)}'],
     ['a{background:url(icon.png)}', ['currentDir' => '/srv/static/css', 'docRoot' => '/var/www', 'symlinks' => ['//static' => '/srv/static']], 'a{background:url(/static/css/icon.png)}'],
 ];
+// Intentional divergences from upstream 3.0.14 (not used in differential mode)
+$fixes = [
+    // Spaces around "+" in calc() must survive when a selector list follows
+    [".x {\n gap: 1px;\n padding-top: calc(var(--h) + 48px); margin: 0;\n}\n.a, .b { color: red; }", [], '.x{gap:1px;padding-top:calc(var(--h) + 48px);margin:0}.a,.b{color:red}'],
+    ['.c{height:calc(2.25rem + 2px)}.d,.e{color:blue}', [], '.c{height:calc(2.25rem + 2px)}.d,.e{color:blue}'],
+    ['@media (max-width: 991px) { .f { width: calc(50% + 30px) } .g > a + b, .h ~ i { color: red } }', [], '@media (max-width: 991px){.f{width:calc(50% + 30px)}.g>a+b,.h~i{color:red}}'],
+];
 $count = 0;
-foreach ($cases as $case) {
+foreach (array_merge($cases, $fixes) as $case) {
     $actual = CSS::minify($case[0], $case[1]);
     if ($actual !== $case[2]) {
         throw new RuntimeException('Golden case ' . $count . ': ' . var_export($actual, true));

@@ -125,15 +125,18 @@ class Compressor
         $css = preg_replace($pattern, '$1$2:$3', $css);
 
         // remove ws in selectors
+        // SkeekS: selector parts never contain ";", "{" or "}". Without this
+        // limit a match started inside a declaration value ("calc(a + 2px);...}.b,.c{")
+        // and removed the spaces around "+", which makes calc() invalid.
         $pattern = '/
                 (?:              # non-capture
                     \\s*
-                    [^~>+,\\s]+  # selector part
+                    [^~>+,\\s;{}]+  # selector part
                     \\s*
                     [,>+~]       # combinators
                 )+
                 \\s*
-                [^~>+,\\s]+      # selector part
+                [^~>+,\\s;{}]+      # selector part
                 {                # open declaration block
             /x';
         $css = preg_replace_callback($pattern, array($this, '_selectorsCB'), $css);
