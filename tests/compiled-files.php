@@ -62,15 +62,22 @@ class RacingComponent extends AssetsAutoCompressComponent
     }
 }
 
-// A cleanup that runs a callback after deciding to unlink, just before the lock.
+// A cleanup that runs a callback after deciding to unlink a path, just before the lock.
 class RacingCleaner extends CompiledFilesCleaner
 {
     public $beforeLock;
+    private $_unlinking;
+
+    protected function _unlink($dir, $path, $cutoff, array &$stats, $lock = true)
+    {
+        $this->_unlinking = $path;
+        return parent::_unlink($dir, $path, $cutoff, $stats, $lock);
+    }
 
     protected function _lock($dir)
     {
         if ($this->beforeLock) {
-            call_user_func($this->beforeLock);
+            call_user_func($this->beforeLock, $this->_unlinking);
         }
         return parent::_lock($dir);
     }
@@ -255,30 +262,33 @@ try {
     clearstatcache();
     check($noTouch === $raceName && filemtime("$cssDir/$raceName") >= $now - 60, 'Served a compiled file with a stale mark after touch() failed.');
 
-    // touch() refused for the second path only: the compiled file is marked
-    // first, so a failed index touch never leaves a fresh index (served without
-    // the lock) pointing to a stale compiled file.
+    // touch() refused for the compiled file during an ordinary hit: at that
+    // moment the index entry must still be stale. A fresh index is served
+    // without the lock, so it may become fresh only after its compiled file did.
     $ageRace();
-    $markUsed = new ReflectionMethod($component, '_markUsed');
-    $markUsed->setAccessible(true);
-    $component->failTouch = function ($path) use ($cssDir) {
-        return strpos($path, '/.index/') !== false;
+    $indexPath = "$cssDir/.index/{$raceIndex[0]}";
+    $indexMarkAtFailure = null;
+    $component->failTouch = function ($path) use ($indexPath, &$indexMarkAtFailure) {
+        if (strpos($path, '/.index/') !== false) {
+            return false;
+        }
+        clearstatcache(true, $indexPath);
+        if ($indexMarkAtFailure === null) {
+            $indexMarkAtFailure = filemtime($indexPath);
+        }
+        return true;
     };
-    $partial = $markUsed->invoke($component, $cssDir, ["$cssDir/$raceName", "$cssDir/.index/{$raceIndex[0]}"]);
-    $component->failTouch = function ($path) use ($cssDir) {
-        return strpos($path, '/.index/') === false;
-    };
-    $ageRace();
-    $partialFirst = $markUsed->invoke($component, $cssDir, ["$cssDir/$raceName", "$cssDir/.index/{$raceIndex[0]}"]);
+    $css->invoke($component, $raceSet(1));
     $component->failTouch = false;
-    clearstatcache();
-    check(!$partial && !$partialFirst && filemtime("$cssDir/.index/{$raceIndex[0]}") < $now - 86400,
-        'A failed touch left a fresh index entry.');
+    check($indexMarkAtFailure !== null && $indexMarkAtFailure < $now - 86400,
+        'The index entry was marked before its compiled file.');
 
     // An expired index entry a page marked meanwhile still protects its file.
     $ageRace();
-    $marking = new RacingCleaner(['dirs' => [$cssDir], 'days' => 7, 'now' => $now, 'beforeLock' => function () use ($cssDir, $raceIndex) {
-        touch("$cssDir/.index/{$raceIndex[0]}");
+    $marking = new RacingCleaner(['dirs' => [$cssDir], 'days' => 7, 'now' => $now, 'beforeLock' => function ($path) use ($cssDir, $raceIndex) {
+        if ($path === "$cssDir/.index/{$raceIndex[0]}") {
+            touch($path);
+        }
     }]);
     $marking->run();
     clearstatcache();
