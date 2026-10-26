@@ -150,6 +150,19 @@ class AssetsAutoCompressComponent extends Component implements BootstrapInterfac
      */
     public $noIncludeCssFilesOnPjax = true;
     /**
+     * How often (seconds) a page hit refreshes the usage mark of a compiled file.
+     * Cleanup removes files whose mark is older than its retention, so the mark
+     * must be refreshed well inside that period; a rare touch keeps hits cheap.
+     * @var int
+     */
+    public $usageTouchInterval = 3600;
+
+    /**
+     * Version of the compiled-file naming scheme; part of every index key.
+     */
+    const COMPILE_SCHEME = 'content-v2';
+
+    /**
      * @var bool|array|string|IFormatter
      */
     protected $_htmlFormatter = false;
@@ -404,15 +417,10 @@ JS
      */
     protected function _processingJsFiles($files = [])
     {
-        $fileName = md5(implode(array_keys($files)).$this->getSettingsHash()).'.js';
-        $publicUrl = \Yii::$app->assetManager->baseUrl.'/js-compress/'.$fileName;
-        //$publicUrl  = \Yii::getAlias('@web/assets/js-compress/' . $fileName);
-
+        $key = md5(implode(array_keys($files)).$this->getSettingsHash());
         $rootDir = \Yii::$app->assetManager->basePath.'/js-compress';
-        //$rootDir    = \Yii::getAlias('@webroot/assets/js-compress');
-        $rootUrl = $rootDir.'/'.$fileName;
 
-        if (file_exists($rootUrl)) {
+        if ($fileName = $this->_findCompiledFile($rootDir, $key, 'js')) {
             $resultFiles = [];
 
             if (!$this->jsFileRemouteCompile) {
@@ -423,8 +431,7 @@ JS
                 }
             }
 
-
-            $publicUrl = $publicUrl."?v=".filemtime($rootUrl);
+            $publicUrl = \Yii::$app->assetManager->baseUrl.'/js-compress/'.$fileName;
             $resultFiles[$publicUrl] = Html::jsFile($publicUrl, $this->jsOptions);
             return $resultFiles;
         }
@@ -496,35 +503,115 @@ JS
                 $contentParts[] = $resultContentPart['content'];
             }
             $content = implode(";\n", $contentParts);
-            if (!is_dir($rootDir)) {
-                if (!FileHelper::createDirectory($rootDir, 0777)) {
-                    return $files;
-                }
-            }
 
             if ($this->jsFileCompress && !$hasMinifiedFiles) {
                 $content = \JShrink\Minifier::minify($content, ['flaggedComments' => $this->jsFileCompressFlaggedComments]);
             }
 
-            $page = \Yii::$app->request->absoluteUrl;
-            $useFunction = function_exists('curl_init') ? 'curl extension' : 'php file_get_contents';
-            $filesString = implode(', ', array_keys($files));
-
-            \Yii::info("Create js file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::class);
-
-            $file = fopen($rootUrl, "w");
-            fwrite($file, $content);
-            fclose($file);
+            $fileName = $this->_storeCompiledFile($rootDir, $key, 'js', $content);
+            if ($fileName) {
+                $publicUrl = \Yii::$app->assetManager->baseUrl.'/js-compress/'.$fileName;
+                \Yii::info("Create js file: {$publicUrl} from files: ".implode(', ', array_keys($files))." on page '".\Yii::$app->request->absoluteUrl."'", static::class);
+                $resultFiles[$publicUrl] = Html::jsFile($publicUrl, $this->jsOptions);
+                return $resultFiles;
+            }
         }
 
+        return $files;
+    }
 
-        if (file_exists($rootUrl)) {
-            $publicUrl = $publicUrl."?v=".filemtime($rootUrl);
-            $resultFiles[$publicUrl] = Html::jsFile($publicUrl, $this->jsOptions);
-            return $resultFiles;
-        } else {
-            return $files;
+    /**
+     * Returns the name of the compiled file recorded for a set of sources, or null.
+     *
+     * Hot path of every page: one small index read and two stats, plus a touch at
+     * most once per $usageTouchInterval.
+     *
+     * @param string $rootDir
+     * @param string $key
+     * @param string $ext
+     * @return string|null
+     */
+    protected function _findCompiledFile($rootDir, $key, $ext)
+    {
+        $indexFile = $rootDir.'/'.CompiledFilesCleaner::INDEX_DIR.'/'.$key;
+        $fileName = @file_get_contents($indexFile);
+        if (!$fileName || !preg_match('/^[0-9a-f]{32}\.'.$ext.'$/', $fileName) || !is_file($rootDir.'/'.$fileName)) {
+            return null;
         }
+
+        $markedAt = @filemtime($indexFile);
+        if ($markedAt && $markedAt < time() - $this->usageTouchInterval) {
+            // Usage marks for cleanup: the index keeps its sources alive and the
+            // compiled file is refreshed too, so a concurrent cleanup re-checking
+            // it before unlinking leaves it in place.
+            @touch($indexFile);
+            @touch($rootDir.'/'.$fileName);
+        }
+
+        return $fileName;
+    }
+
+    /**
+     * Stores compiled content under a name derived from the content itself and
+     * records it for the given set of sources.
+     *
+     * Identical content produced by different source URLs (a republished asset
+     * directory, an unchanged file with a new mtime) reuses one file. Both files
+     * are written to a temporary name and renamed, so a parallel request never
+     * reads a partially written file.
+     *
+     * @param string $rootDir
+     * @param string $key
+     * @param string $ext
+     * @param string $content
+     * @return string|null file name, or null when it could not be written
+     */
+    protected function _storeCompiledFile($rootDir, $key, $ext, $content)
+    {
+        $indexDir = $rootDir.'/'.CompiledFilesCleaner::INDEX_DIR;
+        if (!is_dir($indexDir)) {
+            if (!FileHelper::createDirectory($indexDir, 0777)) {
+                return null;
+            }
+        }
+        $since = $indexDir.'/'.CompiledFilesCleaner::SINCE_FILE;
+        if (!is_file($since)) {
+            // Cleanup removes files of the previous naming scheme only after the
+            // retention period has passed since this moment.
+            @file_put_contents($since, (string)time());
+        }
+
+        $fileName = md5($content).'.'.$ext;
+        $filePath = $rootDir.'/'.$fileName;
+        if (is_file($filePath)) {
+            @touch($filePath);
+        } elseif (!$this->_writeFileAtomically($rootDir, $filePath, $content)) {
+            return null;
+        }
+
+        if (!$this->_writeFileAtomically($indexDir, $indexDir.'/'.$key, $fileName)) {
+            return null;
+        }
+
+        return $fileName;
+    }
+
+    /**
+     * @param string $dir
+     * @param string $path
+     * @param string $content
+     * @return bool
+     */
+    protected function _writeFileAtomically($dir, $path, $content)
+    {
+        $tmp = $dir.'/'.CompiledFilesCleaner::TMP_PREFIX.bin2hex(random_bytes(8));
+        if (@file_put_contents($tmp, $content) !== strlen($content) || !@rename($tmp, $path)) {
+            @unlink($tmp);
+            \Yii::error(__METHOD__.": unable to write '{$path}'", static::class);
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -543,7 +630,16 @@ JS
      */
     public function getSettingsHash()
     {
-        return serialize((array)$this);
+        // Only options that change the compiled content. Serializing the whole
+        // component cost every page and tied names to unrelated state.
+        return serialize([
+            static::COMPILE_SCHEME,
+            $this->cssFileCompress,
+            $this->cssFileRemouteCompile,
+            $this->jsFileCompress,
+            $this->jsFileCompressFlaggedComments,
+            $this->jsFileRemouteCompile,
+        ]);
     }
     /**
      * @param $filePath
@@ -638,15 +734,10 @@ JS
      */
     protected function _processingCssFiles($files = [])
     {
-        $fileName = md5(implode(array_keys($files)).$this->getSettingsHash()).'.css';
-        $publicUrl = \Yii::$app->assetManager->baseUrl.'/css-compress/'.$fileName;
-        //$publicUrl  = \Yii::getAlias('@web/assets/css-compress/' . $fileName);
-
+        $key = md5(implode(array_keys($files)).$this->getSettingsHash());
         $rootDir = \Yii::$app->assetManager->basePath.'/css-compress';
-        //$rootDir    = \Yii::getAlias('@webroot/assets/css-compress');
-        $rootUrl = $rootDir.'/'.$fileName;
 
-        if (file_exists($rootUrl)) {
+        if ($fileName = $this->_findCompiledFile($rootDir, $key, 'css')) {
             $resultFiles = [];
 
             if (!$this->cssFileRemouteCompile) {
@@ -657,7 +748,7 @@ JS
                 }
             }
 
-            $publicUrl = $publicUrl."?v=".filemtime($rootUrl);
+            $publicUrl = \Yii::$app->assetManager->baseUrl.'/css-compress/'.$fileName;
             $resultFiles[$publicUrl] = Html::cssFile($publicUrl, $this->cssOptions);
             return $resultFiles;
         }
@@ -710,36 +801,21 @@ JS
 
         if ($resultContent) {
             $content = implode("\n", $resultContent);
-            if (!is_dir($rootDir)) {
-                if (!FileHelper::createDirectory($rootDir, 0777)) {
-                    return $files;
-                }
-            }
 
             if ($this->cssFileCompress) {
                 $content = \CssMin::minify($content, [], ["Variables" => false]);
             }
 
-            $page = \Yii::$app->request->absoluteUrl;
-            $useFunction = function_exists('curl_init') ? 'curl extension' : 'php file_get_contents';
-            $filesString = implode(', ', array_keys($files));
-
-            \Yii::info("Create css file: {$publicUrl} from files: {$filesString} to use {$useFunction} on page '{$page}'", static::class);
-
-
-            $file = fopen($rootUrl, "w");
-            fwrite($file, $content);
-            fclose($file);
+            $fileName = $this->_storeCompiledFile($rootDir, $key, 'css', $content);
+            if ($fileName) {
+                $publicUrl = \Yii::$app->assetManager->baseUrl.'/css-compress/'.$fileName;
+                \Yii::info("Create css file: {$publicUrl} from files: ".implode(', ', array_keys($files))." on page '".\Yii::$app->request->absoluteUrl."'", static::class);
+                $resultFiles[$publicUrl] = Html::cssFile($publicUrl, $this->cssOptions);
+                return $resultFiles;
+            }
         }
 
-
-        if (file_exists($rootUrl)) {
-            $publicUrl = $publicUrl."?v=".filemtime($rootUrl);
-            $resultFiles[$publicUrl] = Html::cssFile($publicUrl, $this->cssOptions);
-            return $resultFiles;
-        } else {
-            return $files;
-        }
+        return $files;
     }
     /**
      * @param array $css

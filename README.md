@@ -106,6 +106,49 @@ How to use
 ```
 
 
+Compiled files and cleanup
+----------
+
+Compiled files are named by their content: `assets/css-compress/<md5 of content>.css`
+and `assets/js-compress/<md5 of content>.js`, without `?v=`. The set of source URLs
+(they carry asset directory hashes and `?v=mtime`) maps to a compiled file through a
+small index entry `assets/*-compress/.index/<key>`. Republishing sources without
+changing them (a deploy `touch`, a package reinstall) adds an index entry, not a
+new copy of the file. Files and index entries are written to `.tmp-*` and renamed.
+
+A page hit refreshes the mtime of its index entry and compiled file at most once per
+`usageTouchInterval` (1 hour). That mtime is the usage mark for cleanup; atime and
+ctime are not used (backups and `chown -R` change them).
+
+`CompiledFilesCleaner` removes files no page has used for `days` (7) days:
+expired index entries, compiled files no live entry points to and that are older
+than the retention, and stale `.tmp-*`. Files of the previous naming scheme have no
+index entry; they are removed only when the retention has also passed since the
+switch (`.index/.since`), so HTML rendered before the upgrade keeps its files.
+Without `.since` nothing is removed. It reads directory listings and stat() only.
+
+```php
+//Console config
+'controllerMap' => [
+    'assets-auto-compress' => [
+        'class'      => \skeeks\yii2\assetsAuto\console\CleanupController::class,
+        'assetsDirs' => ['@frontend/web/assets'],
+    ],
+],
+```
+
+```
+php yii assets-auto-compress/cleanup --dry-run
+php yii assets-auto-compress/cleanup --days=7
+```
+
+A removed compiled file is rebuilt by the next page that renders it; a direct request
+to it from an old HTML page gets 404, which is why the retention counts from the last use.
+`skeeks/cms-assets-auto-compress` runs the cleanup daily as a `cms-job` job.
+
+Tests: `php tests/compiled-files.php vendor/autoload.php`.
+
+
 Links
 ----------
 * [Github](https://github.com/skeeks-semenov/yii2-assets-auto-compress)
