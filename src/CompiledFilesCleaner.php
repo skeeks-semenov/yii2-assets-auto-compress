@@ -15,17 +15,26 @@ use yii\base\BaseObject;
  *
  * Layout of a compiled directory (css-compress, js-compress):
  * - `<md5 of content>.css|js` — compiled files, named by their content;
- * - `.index/<key>` — one small file per set of sources, holding the compiled file
- *   name; its mtime is the usage mark refreshed by page hits;
+ * - `.index/<32 hex key>` — one small file per set of sources, holding the
+ *   compiled file name; its mtime is the usage mark refreshed by page hits;
  * - `.index/.since` — when the content naming started in this directory;
- * - `.tmp-*` — files being written.
+ * - `.index/.lock` — the lock shared by pages and cleanup (see lock());
+ * - `.tmp-<16 hex>` — files being written.
  *
  * A compiled file is kept while a live index entry points to it or while it is
  * younger than the retention. Files of the previous scheme (named by sources)
  * have no index entry; they are removed only after the retention has also passed
- * since `.since`, so HTML rendered before the upgrade keeps its files.
+ * since `.since`, so HTML rendered before the upgrade keeps its files. Without
+ * `.since` no compiled file is removed (expired index entries and abandoned
+ * temporary files still are). Entries with other names are never touched.
  *
- * Only directory listings and stat() are used; compiled content is never read.
+ * Pages refresh usage marks and store files under a shared lock; cleanup
+ * re-checks the mark and unlinks under an exclusive one, so a page that marked a
+ * file keeps it and a page never marks (recreates) a file already removed.
+ *
+ * Only directory listings, stat() and the small index entries are read;
+ * compiled content is never read. If a directory or a live index entry cannot be
+ * read, no compiled file is removed from that directory and an error is counted.
  *
  * @author Semenov Alexander <semenov@skeeks.com>
  */
@@ -33,7 +42,11 @@ class CompiledFilesCleaner extends BaseObject
 {
     const INDEX_DIR = '.index';
     const SINCE_FILE = '.since';
+    const LOCK_FILE = '.lock';
     const TMP_PREFIX = '.tmp-';
+    const INDEX_PATTERN = '/^[0-9a-f]{32}$/';
+    const COMPILED_PATTERN = '/^[0-9a-f]{32}\.(css|js)$/';
+    const TMP_PATTERN = '/^\.tmp-[0-9a-f]{16}$/';
 
     /**
      * Directories that contain compiled files (…/assets/css-compress, …/assets/js-compress).
@@ -96,6 +109,41 @@ class CompiledFilesCleaner extends BaseObject
     }
 
     /**
+     * Takes the lock of a compiled directory.
+     *
+     * Pages take it shared (LOCK_SH) only to refresh a usage mark or to store a
+     * file; cleanup takes it exclusive (LOCK_EX) for each unlink.
+     *
+     * @param string $dir compiled directory
+     * @param int $operation LOCK_SH or LOCK_EX
+     * @return resource|null null when the lock file cannot be opened
+     */
+    public static function lock($dir, $operation)
+    {
+        $path = $dir.'/'.self::INDEX_DIR.'/'.self::LOCK_FILE;
+        // flock() needs no write access: a lock file of another user opens read-only.
+        $handle = @fopen($path, 'c') ?: @fopen($path, 'r');
+        if (!$handle) {
+            return null;
+        }
+        if (!flock($handle, $operation)) {
+            fclose($handle);
+            return null;
+        }
+
+        return $handle;
+    }
+
+    /**
+     * @param resource $handle
+     */
+    public static function unlock($handle)
+    {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
+
+    /**
      * @return array totals: files, bytes, index entries removed, files kept, temporary files removed, errors
      */
     public function run()
@@ -126,39 +174,55 @@ class CompiledFilesCleaner extends BaseObject
         // 1. Index entries: expired ones go, live ones protect their files.
         $referenced = [];
         $since = null;
-        foreach ($this->_entries($indexDir) as $name) {
-            $path = $indexDir.'/'.$name;
-            if ($name === self::SINCE_FILE) {
-                $since = @filemtime($path) ?: null;
-                continue;
+        $complete = true;
+        if (file_exists($indexDir)) {
+            $entries = $this->_entries($indexDir, $stats);
+            if ($entries === null) {
+                return $stats;
             }
-            if ($this->_removeStaleTmp($path, $name, $now, $stats)) {
-                continue;
-            }
-            $mtime = @filemtime($path);
-            if ($mtime === false) {
-                continue;
-            }
-            if ($mtime < $indexCutoff) {
-                if ($this->_unlink($path, $indexCutoff, $stats)) {
-                    $stats['indexes']++;
+            foreach ($entries as $name) {
+                $path = $indexDir.'/'.$name;
+                if ($name === self::SINCE_FILE) {
+                    $since = @filemtime($path) ?: null;
+                    continue;
                 }
-                continue;
-            }
-            $target = @file_get_contents($path);
-            if ($target) {
-                $referenced[$target] = true;
+                if ($this->_removeStaleTmp($dir, $path, $name, $now, $stats) || !preg_match(self::INDEX_PATTERN, $name)) {
+                    continue;
+                }
+                $mtime = @filemtime($path);
+                if ($mtime === false || !is_file($path)) {
+                    continue;
+                }
+                if ($mtime < $indexCutoff) {
+                    if ($this->_unlink($dir, $path, $indexCutoff, $stats)) {
+                        $stats['indexes']++;
+                    }
+                    continue;
+                }
+                $target = @file_get_contents($path);
+                if ($target === false || $target === '') {
+                    // An unreadable live entry may protect any compiled file;
+                    // entries are written atomically, so an empty one is broken too.
+                    $stats['errors']++;
+                    $complete = false;
+                } else {
+                    $referenced[$target] = true;
+                }
             }
         }
 
         // 2. Compiled files.
-        $previousSchemeExpired = $since !== null && $since < $fileCutoff;
-        foreach ($this->_entries($dir) as $name) {
+        $previousSchemeExpired = $complete && $since !== null && $since < $fileCutoff;
+        $entries = $this->_entries($dir, $stats);
+        if ($entries === null) {
+            return $stats;
+        }
+        foreach ($entries as $name) {
             $path = $dir.'/'.$name;
-            if ($this->_removeStaleTmp($path, $name, $now, $stats)) {
+            if ($this->_removeStaleTmp($dir, $path, $name, $now, $stats)) {
                 continue;
             }
-            if (!preg_match('/^[0-9a-f]{32}\.(css|js)$/', $name) || !is_file($path)) {
+            if (!preg_match(self::COMPILED_PATTERN, $name) || !is_file($path)) {
                 continue;
             }
             $mtime = @filemtime($path);
@@ -170,7 +234,7 @@ class CompiledFilesCleaner extends BaseObject
                 continue;
             }
             $size = (int)@filesize($path);
-            if ($this->_unlink($path, $fileCutoff, $stats)) {
+            if ($this->_unlink($dir, $path, $fileCutoff, $stats)) {
                 $stats['files']++;
                 $stats['bytes'] += $size;
             }
@@ -188,15 +252,30 @@ class CompiledFilesCleaner extends BaseObject
     }
 
     /**
-     * Streams directory entries, calling the checkpoint periodically.
+     * Opens a directory for streaming its entries.
      * @param string $dir
+     * @param array $stats
+     * @return \Generator|null null, with an error counted, when it cannot be read
+     */
+    protected function _entries($dir, array &$stats)
+    {
+        $handle = @opendir($dir);
+        if (!$handle) {
+            $stats['errors']++;
+            \Yii::warning("Unable to read '{$dir}'", static::class);
+            return null;
+        }
+
+        return $this->_readEntries($handle);
+    }
+
+    /**
+     * Streams directory entries, calling the checkpoint periodically.
+     * @param resource $handle
      * @return \Generator
      */
-    protected function _entries($dir)
+    protected function _readEntries($handle)
     {
-        if (!is_dir($dir) || !($handle = @opendir($dir))) {
-            return;
-        }
         try {
             $i = 0;
             while (($name = readdir($handle)) !== false) {
@@ -216,12 +295,13 @@ class CompiledFilesCleaner extends BaseObject
     /**
      * @return bool whether the entry was a temporary file (removed or not)
      */
-    protected function _removeStaleTmp($path, $name, $now, array &$stats)
+    protected function _removeStaleTmp($dir, $path, $name, $now, array &$stats)
     {
-        if (strpos($name, self::TMP_PREFIX) !== 0) {
+        if (!preg_match(self::TMP_PATTERN, $name)) {
             return false;
         }
-        if (is_file($path) && $this->_unlink($path, $now - (int)$this->tmpTtl, $stats)) {
+        // Pages never mark temporary files, so no lock is needed.
+        if (is_file($path) && $this->_unlink($dir, $path, $now - (int)$this->tmpTtl, $stats, false)) {
             $stats['tmp']++;
         }
 
@@ -229,24 +309,52 @@ class CompiledFilesCleaner extends BaseObject
     }
 
     /**
-     * Unlinks a file unless it was used (touched) after the cutoff in the meantime.
+     * Unlinks a file unless it was used (marked) after the cutoff in the meantime.
+     *
+     * The mark is re-checked under the exclusive lock. A page refreshing it holds
+     * the shared lock, so either the page finds the file gone (and compiles
+     * again) or the cleanup finds the fresh mark (and keeps the file).
+     *
      * @return bool
      */
-    protected function _unlink($path, $cutoff, array &$stats)
+    protected function _unlink($dir, $path, $cutoff, array &$stats, $lock = true)
     {
-        clearstatcache(true, $path);
-        $mtime = @filemtime($path);
-        if ($mtime === false || $mtime >= $cutoff) {
-            return false;
+        $handle = null;
+        if ($lock && !$this->dryRun) {
+            $handle = $this->_lock($dir);
+            if (!$handle) {
+                $stats['errors']++;
+                return false;
+            }
         }
-        if ($this->dryRun) {
-            return true;
-        }
-        if (!@unlink($path)) {
-            $stats['errors']++;
-            return false;
-        }
+        try {
+            clearstatcache(true, $path);
+            $mtime = @filemtime($path);
+            if ($mtime === false || $mtime >= $cutoff) {
+                return false;
+            }
+            if ($this->dryRun) {
+                return true;
+            }
+            if (!@unlink($path)) {
+                $stats['errors']++;
+                return false;
+            }
 
-        return true;
+            return true;
+        } finally {
+            if ($handle) {
+                static::unlock($handle);
+            }
+        }
+    }
+
+    /**
+     * @param string $dir
+     * @return resource|null
+     */
+    protected function _lock($dir)
+    {
+        return static::lock($dir, LOCK_EX);
     }
 }

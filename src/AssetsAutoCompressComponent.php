@@ -523,8 +523,8 @@ JS
     /**
      * Returns the name of the compiled file recorded for a set of sources, or null.
      *
-     * Hot path of every page: one small index read and two stats, plus a touch at
-     * most once per $usageTouchInterval.
+     * Hot path of every page: one small index read and two stats, plus a locked
+     * touch at most once per $usageTouchInterval.
      *
      * @param string $rootDir
      * @param string $key
@@ -542,13 +542,51 @@ JS
         $markedAt = @filemtime($indexFile);
         if ($markedAt && $markedAt < time() - $this->usageTouchInterval) {
             // Usage marks for cleanup: the index keeps its sources alive and the
-            // compiled file is refreshed too, so a concurrent cleanup re-checking
-            // it before unlinking leaves it in place.
-            @touch($indexFile);
-            @touch($rootDir.'/'.$fileName);
+            // compiled file is refreshed too. A fresh mark (younger than the
+            // interval) is never old enough for cleanup, so only this refresh
+            // needs the lock.
+            if (!$this->_markUsed($rootDir, [$indexFile, $rootDir.'/'.$fileName])) {
+                return null;
+            }
         }
 
         return $fileName;
+    }
+
+    /**
+     * Refreshes usage marks under the shared lock.
+     *
+     * Cleanup unlinks under the exclusive lock after re-checking the mark, so the
+     * files either still exist here (and the fresh mark keeps them) or are gone.
+     * touch() would recreate a removed file empty, hence the existence check.
+     *
+     * @param string $rootDir
+     * @param string[] $paths
+     * @return bool false when a file is gone and the set must be compiled again
+     */
+    protected function _markUsed($rootDir, array $paths)
+    {
+        $lock = CompiledFilesCleaner::lock($rootDir, LOCK_SH);
+        if (!$lock) {
+            // Without the lock a touch could recreate a removed file empty; the
+            // mark is refreshed by a later hit.
+            return true;
+        }
+        try {
+            foreach ($paths as $path) {
+                clearstatcache(true, $path);
+                if (!is_file($path)) {
+                    return false;
+                }
+            }
+            foreach ($paths as $path) {
+                @touch($path);
+            }
+
+            return true;
+        } finally {
+            CompiledFilesCleaner::unlock($lock);
+        }
     }
 
     /**
@@ -583,14 +621,25 @@ JS
 
         $fileName = md5($content).'.'.$ext;
         $filePath = $rootDir.'/'.$fileName;
-        if (is_file($filePath)) {
-            @touch($filePath);
-        } elseif (!$this->_writeFileAtomically($rootDir, $filePath, $content)) {
-            return null;
-        }
 
-        if (!$this->_writeFileAtomically($indexDir, $indexDir.'/'.$key, $fileName)) {
-            return null;
+        // Under the shared lock cleanup cannot remove the reused file between the
+        // check and the touch (see _markUsed()).
+        $lock = CompiledFilesCleaner::lock($rootDir, LOCK_SH);
+        try {
+            clearstatcache(true, $filePath);
+            if ($lock && is_file($filePath)) {
+                @touch($filePath);
+            } elseif (!$this->_writeFileAtomically($rootDir, $filePath, $content)) {
+                return null;
+            }
+
+            if (!$this->_writeFileAtomically($indexDir, $indexDir.'/'.$key, $fileName)) {
+                return null;
+            }
+        } finally {
+            if ($lock) {
+                CompiledFilesCleaner::unlock($lock);
+            }
         }
 
         return $fileName;
@@ -631,9 +680,11 @@ JS
     public function getSettingsHash()
     {
         // Only options that change the compiled content. Serializing the whole
-        // component cost every page and tied names to unrelated state.
+        // component cost every page and tied names to unrelated state. A subclass
+        // with another option that changes the content must extend this hash.
         return serialize([
             static::COMPILE_SCHEME,
+            $this->webroot,
             $this->cssFileCompress,
             $this->cssFileRemouteCompile,
             $this->jsFileCompress,

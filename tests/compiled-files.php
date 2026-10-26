@@ -21,6 +21,39 @@ function listDir($dir)
     return array_values(array_diff(scandir($dir), ['.', '..']));
 }
 
+function indexEntries($dir)
+{
+    return array_values(preg_grep(CompiledFilesCleaner::INDEX_PATTERN, listDir("$dir/.index")));
+}
+
+// A page whose usage mark refresh runs a callback just before taking the lock.
+class RacingComponent extends AssetsAutoCompressComponent
+{
+    public $beforeMark;
+
+    protected function _markUsed($rootDir, array $paths)
+    {
+        if ($this->beforeMark) {
+            call_user_func($this->beforeMark, $paths);
+        }
+        return parent::_markUsed($rootDir, $paths);
+    }
+}
+
+// A cleanup that runs a callback after deciding to unlink, just before the lock.
+class RacingCleaner extends CompiledFilesCleaner
+{
+    public $beforeLock;
+
+    protected function _lock($dir)
+    {
+        if ($this->beforeLock) {
+            call_user_func($this->beforeLock);
+        }
+        return parent::_lock($dir);
+    }
+}
+
 $_SERVER['DOCUMENT_ROOT'] = '/var/www';
 $temp = sys_get_temp_dir() . '/skeeks-compiled-' . bin2hex(random_bytes(8));
 mkdir($temp . '/assets', 0700, true);
@@ -35,7 +68,7 @@ new yii\web\Application([
         'assetManager' => ['basePath' => $temp . '/assets', 'baseUrl' => '/assets'],
     ],
 ]);
-$component = new AssetsAutoCompressComponent(['webroot' => $temp]);
+$component = new RacingComponent(['webroot' => $temp]);
 $css = new ReflectionMethod($component, '_processingCssFiles');
 $css->setAccessible(true);
 $js = new ReflectionMethod($component, '_processingJsFiles');
@@ -56,7 +89,7 @@ try {
     check($first === $css->invoke($component, $cssSet(1)), 'Repeated request changed the result.');
     check(array_key_first($css->invoke($component, $cssSet(2))) === $url, 'Same content under a new mtime got a new file.');
     check(count($compiled($cssDir)) === 1, 'Duplicate compiled file written.');
-    check(count(listDir("$cssDir/.index")) === 3, 'Expected two index entries and .since.');
+    check(count(indexEntries($cssDir)) === 2 && is_file("$cssDir/.index/.since"), 'Expected two index entries and .since.');
     check(!preg_grep('/^\.tmp-/', listDir($cssDir)), 'Temporary file left behind.');
 
     file_put_contents($temp . '/css/a.css', 'a { color: #000000; }');
@@ -67,7 +100,7 @@ try {
     check(array_key_first($js->invoke($component, $jsSet(2))) === $jsUrl && count($compiled($jsDir)) === 1, 'JS duplicate written.');
 
     // A hit refreshes a stale usage mark at most once per interval.
-    $indexes = array_values(array_diff(listDir("$cssDir/.index"), ['.since']));
+    $indexes = indexEntries($cssDir);
     $stale = time() - 7200;
     foreach ($indexes as $index) {
         touch("$cssDir/.index/$index", $stale);
@@ -89,19 +122,29 @@ try {
             touch("$cssDir/$oldName", $old);
         }
     }
-    $tmp = CompiledFilesCleaner::TMP_PREFIX . 'abandoned';
+    $tmp = CompiledFilesCleaner::TMP_PREFIX . bin2hex(random_bytes(8));
+    $foreign = ['README.txt', '.tmp-notours', 'Q' . str_repeat('0', 31)];
+    foreach ($foreign as $f) {
+        file_put_contents("$cssDir/.index/$f", 'not an index');
+        touch("$cssDir/.index/$f", $old);
+        file_put_contents("$cssDir/$f", 'not compiled');
+        touch("$cssDir/$f", $old);
+    }
     file_put_contents("$cssDir/$tmp", 'partial');
     touch("$cssDir/$tmp", $now - 7200);
     touch("$cssDir/.index/.since", $now - 20 * 86400);
 
     $dry = (new CompiledFilesCleaner(['dirs' => [$cssDir], 'days' => 7, 'dryRun' => true, 'now' => $now]))->run();
     check($dry['files'] === 1 && $dry['indexes'] === 2 && $dry['tmp'] === 1, 'Dry run counted wrong: ' . json_encode($dry));
-    check(is_file("$cssDir/$oldName") && is_file("$cssDir/$tmp") && count(listDir("$cssDir/.index")) === 4, 'Dry run deleted something.');
+    check(is_file("$cssDir/$oldName") && is_file("$cssDir/$tmp") && count(indexEntries($cssDir)) === 3, 'Dry run deleted something.');
 
     $real = (new CompiledFilesCleaner(['dirs' => [$cssDir], 'days' => 7, 'now' => $now]))->run();
     check($real['files'] === 1 && $real['bytes'] > 0 && $real['indexes'] === 2 && $real['tmp'] === 1 && $real['errors'] === 0, 'Cleanup counted wrong: ' . json_encode($real));
     check(!is_file("$cssDir/$oldName") && !is_file("$cssDir/$tmp"), 'Unused file or temporary file kept.');
     check(is_file("$cssDir/$newName"), 'Used file removed.');
+    foreach ($foreign as $f) {
+        check(is_file("$cssDir/.index/$f") && is_file("$cssDir/$f"), "Foreign entry $f removed.");
+    }
 
     // Previous-scheme files (no index entry, older than the switch) go only once
     // the retention has also passed since the switch: HTML rendered before the
@@ -124,6 +167,66 @@ try {
     $none = (new CompiledFilesCleaner(['dirs' => [$bare], 'days' => 7, 'now' => $now]))->run();
     check($none['files'] === 0 && is_file("$bare/$legacy"), 'Removed files of a directory without the new scheme.');
 
+    // Race: cleanup decided to unlink, a page refreshes the mark before the
+    // exclusive lock is taken. The re-check under the lock keeps the file.
+    $raceSet = function ($v) { return ["/css/a.css?r=$v" => "<link href=\"/css/a.css?r=$v\">"]; };
+    $raceName = basename(array_key_first($css->invoke($component, $raceSet(1))));
+    $raceIndex = array_values(array_filter(indexEntries($cssDir), function ($i) use ($cssDir, $raceName) {
+        return file_get_contents("$cssDir/.index/$i") === $raceName;
+    }));
+    $ageRace = function () use ($cssDir, $raceIndex, $raceName, $now) {
+        foreach ($raceIndex as $i) {
+            touch("$cssDir/.index/$i", $now - 10 * 86400);
+        }
+        touch("$cssDir/$raceName", $now - 10 * 86400);
+        clearstatcache();
+    };
+    $ageRace();
+    $racing = new RacingCleaner(['dirs' => [$cssDir], 'days' => 7, 'now' => $now, 'beforeLock' => function () use ($css, $component, $raceSet) {
+        $css->invoke($component, $raceSet(1));
+    }]);
+    $raced = $racing->run();
+    clearstatcache();
+    check(is_file("$cssDir/$raceName") && filesize("$cssDir/$raceName") > 0, 'Cleanup removed a file a page had just marked: ' . json_encode($raced));
+    check(count(array_filter(indexEntries($cssDir), function ($i) use ($cssDir, $raceName) {
+        return file_get_contents("$cssDir/.index/$i") === $raceName;
+    })) >= 1, 'Cleanup removed an index entry a page had just marked.');
+
+    // Race: a page read a stale index entry, cleanup removed the compiled file
+    // before the page took the lock. The page compiles again; no empty file.
+    $ageRace();
+    $component->beforeMark = function ($paths) {
+        unlink($paths[1]);
+    };
+    $recompiled = basename(array_key_first($css->invoke($component, $raceSet(1))));
+    $component->beforeMark = null;
+    clearstatcache();
+    check($recompiled === $raceName && filesize("$cssDir/$raceName") > 0
+        && md5_file("$cssDir/$raceName") . '.css' === $raceName, 'Page recreated a removed compiled file empty or wrong.');
+
+    // The exclusive lock of cleanup and the shared lock of pages are one lock file.
+    $held = CompiledFilesCleaner::lock($cssDir, LOCK_EX);
+    $other = fopen("$cssDir/.index/" . CompiledFilesCleaner::LOCK_FILE, 'r');
+    check($held && !flock($other, LOCK_SH | LOCK_NB), 'Pages and cleanup do not share the lock.');
+    CompiledFilesCleaner::unlock($held);
+    check(flock($other, LOCK_SH | LOCK_NB), 'Lock not released.');
+    fclose($other);
+
+    // Unreadable directories and entries are errors and block deletion.
+    $broken = $temp . '/assets-broken/css-compress';
+    mkdir($broken, 0700, true);
+    file_put_contents("$broken/.index", 'a file, not a directory');
+    file_put_contents("$broken/$legacy", 'old scheme');
+    touch("$broken/$legacy", $now - 30 * 86400);
+    $brokenRun = (new CompiledFilesCleaner(['dirs' => [$broken, $temp . '/css/a.css'], 'days' => 7, 'now' => $now]))->run();
+    check($brokenRun['errors'] === 2 && $brokenRun['files'] === 0 && is_file("$broken/$legacy"), 'Unreadable directories ignored: ' . json_encode($brokenRun));
+    unlink("$broken/.index");
+    mkdir("$broken/.index");
+    touch("$broken/.index/.since", $now - 20 * 86400);
+    touch("$broken/.index/" . md5("unreadable"));
+    $entryRun = (new CompiledFilesCleaner(['dirs' => [$broken], 'days' => 7, 'now' => $now]))->run();
+    check($entryRun['errors'] === 1 && $entryRun['files'] === 0 && is_file("$broken/$legacy"), 'Unreadable index entry ignored: ' . json_encode($entryRun));
+
     // A removed index makes the next page compile again, reusing the content name.
     $again = array_key_first($css->invoke($component, $cssSet(1)));
     check(basename($again) === $newName || is_file($cssDir . '/' . basename($again)), 'Page did not recover after cleanup.');
@@ -133,8 +236,10 @@ try {
     $component->usageTouchInterval = 60;
     $component->cssOptions = ['media' => 'print'];
     check($before === $component->getSettingsHash(), 'Settings hash depends on non-content options.');
+    $otherRoot = new AssetsAutoCompressComponent(['webroot' => $temp . '/other']);
+    check($otherRoot->getSettingsHash() !== (new AssetsAutoCompressComponent(['webroot' => $temp]))->getSettingsHash(), 'Settings hash ignores webroot.');
 
-    echo "PASS: content names, no duplicates, atomic writes, usage marks, dry run, cleanup, legacy grace.\n";
+    echo "PASS: content names, no duplicates, atomic writes, usage marks, dry run, cleanup, legacy grace, locked races, foreign entries, read errors, webroot.\n";
 } finally {
     yii\helpers\FileHelper::removeDirectory($temp);
 }

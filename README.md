@@ -122,10 +122,24 @@ ctime are not used (backups and `chown -R` change them).
 
 `CompiledFilesCleaner` removes files no page has used for `days` (7) days:
 expired index entries, compiled files no live entry points to and that are older
-than the retention, and stale `.tmp-*`. Files of the previous naming scheme have no
-index entry; they are removed only when the retention has also passed since the
-switch (`.index/.since`), so HTML rendered before the upgrade keeps its files.
-Without `.since` nothing is removed. It reads directory listings and stat() only.
+than the retention, and `.tmp-<16 hex>` files older than an hour. Files of the
+previous naming scheme have no index entry; they are removed only when the retention
+has also passed since the switch (`.index/.since`), so HTML rendered before the
+upgrade keeps its files. Without `.since` no compiled file is removed (expired index
+entries and stale temporary files still are). Entries with other names are left
+alone. It reads directory listings, stat() and the small index entries, never the
+compiled content. If a directory or a live index entry cannot be read, no compiled
+file of that directory is removed and the run reports an error.
+
+Pages refresh usage marks and store files under a shared `flock` on
+`.index/.lock`; cleanup re-checks the mark and unlinks under an exclusive one. A page
+that marked a file in time keeps it; a page that comes too late finds it gone and
+compiles again instead of recreating it empty. Only the hourly mark refresh and a
+store take the lock; an ordinary hit does not.
+
+`getSettingsHash()` is part of the index key and lists the options that change the
+compiled content (and the resolved `webroot`). A subclass adding such an option must
+extend it.
 
 ```php
 //Console config
