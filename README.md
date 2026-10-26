@@ -138,7 +138,9 @@ compiles again instead of recreating it empty. Only the hourly mark refresh and 
 store take the lock; an ordinary hit does not, and only when its mark is known to be
 fresh (a vanished index entry is a miss). If the lock cannot be taken, the page uses
 its source files (with a warning in the log); if `touch()` is refused (a file of
-another owner), the store rewrites the file, which gives it a fresh mark.
+another owner), the store rewrites the file, which gives it a fresh mark. The
+compiled file is marked before its index entry, so a fresh entry always points to a
+fresh file.
 
 `getSettingsHash()` is part of the index key and lists the options that change the
 compiled content (and the resolved `webroot`). A subclass adding such an option must

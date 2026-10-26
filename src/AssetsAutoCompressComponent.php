@@ -548,7 +548,7 @@ JS
             return null;
         }
         if ($markedAt < time() - $this->usageTouchInterval
-            && !$this->_markUsed($rootDir, [$indexFile, $rootDir.'/'.$fileName])) {
+            && !$this->_markUsed($rootDir, [$rootDir.'/'.$fileName, $indexFile])) {
             return null;
         }
 
@@ -562,8 +562,12 @@ JS
      * files either still exist here (and the fresh mark keeps them) or are gone.
      * touch() would recreate a removed file empty, hence the existence check.
      *
+     * Paths are touched in order and the index entry goes last: a fresh index is
+     * served without the lock, so it may become fresh only after its compiled
+     * file did. A failed touch leaves the remaining marks stale.
+     *
      * @param string $rootDir
-     * @param string[] $paths
+     * @param string[] $paths the compiled file first, its index entry last
      * @return bool false when the marks could not be refreshed (a file is gone,
      * no lock, a failed touch): the set is compiled again, and the store either
      * rewrites the files with fresh marks or the page uses its source files

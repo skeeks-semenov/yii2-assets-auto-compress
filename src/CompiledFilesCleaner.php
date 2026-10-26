@@ -193,12 +193,15 @@ class CompiledFilesCleaner extends BaseObject
                 if ($mtime === false || !is_file($path)) {
                     continue;
                 }
-                if ($mtime < $indexCutoff) {
-                    if ($this->_unlink($dir, $path, $indexCutoff, $stats)) {
-                        $stats['indexes']++;
-                    }
+                if ($mtime < $indexCutoff && $this->_unlink($dir, $path, $indexCutoff, $stats)) {
+                    $stats['indexes']++;
                     continue;
                 }
+                if (!is_file($path)) {
+                    continue;
+                }
+                // Live, or kept by the unlink (a page marked it meanwhile, or the
+                // unlink failed): it protects its compiled file.
                 $target = @file_get_contents($path);
                 if ($target === false || $target === '') {
                     // An unreadable live entry may protect any compiled file;

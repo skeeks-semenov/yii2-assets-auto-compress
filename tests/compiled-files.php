@@ -49,7 +49,8 @@ class RacingComponent extends AssetsAutoCompressComponent
 
     protected function _touch($path)
     {
-        return $this->failTouch ? false : parent::_touch($path);
+        $fail = is_callable($this->failTouch) ? call_user_func($this->failTouch, $path) : $this->failTouch;
+        return $fail ? false : parent::_touch($path);
     }
 
     protected function _markUsed($rootDir, array $paths)
@@ -254,6 +255,35 @@ try {
     clearstatcache();
     check($noTouch === $raceName && filemtime("$cssDir/$raceName") >= $now - 60, 'Served a compiled file with a stale mark after touch() failed.');
 
+    // touch() refused for the second path only: the compiled file is marked
+    // first, so a failed index touch never leaves a fresh index (served without
+    // the lock) pointing to a stale compiled file.
+    $ageRace();
+    $markUsed = new ReflectionMethod($component, '_markUsed');
+    $markUsed->setAccessible(true);
+    $component->failTouch = function ($path) use ($cssDir) {
+        return strpos($path, '/.index/') !== false;
+    };
+    $partial = $markUsed->invoke($component, $cssDir, ["$cssDir/$raceName", "$cssDir/.index/{$raceIndex[0]}"]);
+    $component->failTouch = function ($path) use ($cssDir) {
+        return strpos($path, '/.index/') === false;
+    };
+    $ageRace();
+    $partialFirst = $markUsed->invoke($component, $cssDir, ["$cssDir/$raceName", "$cssDir/.index/{$raceIndex[0]}"]);
+    $component->failTouch = false;
+    clearstatcache();
+    check(!$partial && !$partialFirst && filemtime("$cssDir/.index/{$raceIndex[0]}") < $now - 86400,
+        'A failed touch left a fresh index entry.');
+
+    // An expired index entry a page marked meanwhile still protects its file.
+    $ageRace();
+    $marking = new RacingCleaner(['dirs' => [$cssDir], 'days' => 7, 'now' => $now, 'beforeLock' => function () use ($cssDir, $raceIndex) {
+        touch("$cssDir/.index/{$raceIndex[0]}");
+    }]);
+    $marking->run();
+    clearstatcache();
+    check(is_file("$cssDir/$raceName"), 'A kept index entry did not protect its compiled file.');
+
     // The exclusive lock of cleanup and the shared lock of pages are one lock file.
     $held = CompiledFilesCleaner::lock($cssDir, LOCK_EX);
     $other = fopen("$cssDir/.index/" . CompiledFilesCleaner::LOCK_FILE, 'r');
@@ -289,7 +319,7 @@ try {
     $otherRoot = new AssetsAutoCompressComponent(['webroot' => $temp . '/other']);
     check($otherRoot->getSettingsHash() !== (new AssetsAutoCompressComponent(['webroot' => $temp]))->getSettingsHash(), 'Settings hash ignores webroot.');
 
-    echo "PASS: content names, no duplicates, atomic writes, usage marks, dry run, cleanup, legacy grace, locked races, vanished index, lock and touch failures, foreign entries, read errors, webroot.\n";
+    echo "PASS: content names, no duplicates, atomic writes, usage marks, dry run, cleanup, legacy grace, locked races, vanished index, lock and touch failures (partial too), kept entries protect, foreign entries, read errors, webroot.\n";
 } finally {
     yii\helpers\FileHelper::removeDirectory($temp);
 }
