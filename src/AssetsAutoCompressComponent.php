@@ -539,15 +539,17 @@ JS
             return null;
         }
 
-        $markedAt = @filemtime($indexFile);
-        if ($markedAt && $markedAt < time() - $this->usageTouchInterval) {
-            // Usage marks for cleanup: the index keeps its sources alive and the
-            // compiled file is refreshed too. A fresh mark (younger than the
-            // interval) is never old enough for cleanup, so only this refresh
-            // needs the lock.
-            if (!$this->_markUsed($rootDir, [$indexFile, $rootDir.'/'.$fileName])) {
-                return null;
-            }
+        // Usage marks for cleanup: the index keeps its sources alive and the
+        // compiled file is refreshed together with it. Only a mark known to be
+        // fresh (younger than the interval, so never old enough for cleanup) is
+        // served without the lock; a vanished index (false) is a miss.
+        $markedAt = $this->_usageMark($indexFile);
+        if ($markedAt === false) {
+            return null;
+        }
+        if ($markedAt < time() - $this->usageTouchInterval
+            && !$this->_markUsed($rootDir, [$indexFile, $rootDir.'/'.$fileName])) {
+            return null;
         }
 
         return $fileName;
@@ -562,15 +564,15 @@ JS
      *
      * @param string $rootDir
      * @param string[] $paths
-     * @return bool false when a file is gone and the set must be compiled again
+     * @return bool false when the marks could not be refreshed (a file is gone,
+     * no lock, a failed touch): the set is compiled again, and the store either
+     * rewrites the files with fresh marks or the page uses its source files
      */
     protected function _markUsed($rootDir, array $paths)
     {
-        $lock = CompiledFilesCleaner::lock($rootDir, LOCK_SH);
+        $lock = $this->_lockShared($rootDir);
         if (!$lock) {
-            // Without the lock a touch could recreate a removed file empty; the
-            // mark is refreshed by a later hit.
-            return true;
+            return false;
         }
         try {
             foreach ($paths as $path) {
@@ -580,13 +582,42 @@ JS
                 }
             }
             foreach ($paths as $path) {
-                @touch($path);
+                if (!$this->_touch($path)) {
+                    return false;
+                }
             }
 
             return true;
         } finally {
             CompiledFilesCleaner::unlock($lock);
         }
+    }
+
+    /**
+     * @param string $path
+     * @return int|false mtime, the usage mark
+     */
+    protected function _usageMark($path)
+    {
+        return @filemtime($path);
+    }
+
+    /**
+     * @param string $path
+     * @return bool
+     */
+    protected function _touch($path)
+    {
+        return @touch($path);
+    }
+
+    /**
+     * @param string $rootDir
+     * @return resource|null
+     */
+    protected function _lockShared($rootDir)
+    {
+        return CompiledFilesCleaner::lock($rootDir, LOCK_SH);
     }
 
     /**
@@ -623,13 +654,18 @@ JS
         $filePath = $rootDir.'/'.$fileName;
 
         // Under the shared lock cleanup cannot remove the reused file between the
-        // check and the touch (see _markUsed()).
-        $lock = CompiledFilesCleaner::lock($rootDir, LOCK_SH);
+        // check and the touch (see _markUsed()). Without the lock the result is
+        // unprotected, so the page keeps its source files.
+        $lock = $this->_lockShared($rootDir);
+        if (!$lock) {
+            \Yii::warning(__METHOD__.": unable to lock '{$indexDir}/".CompiledFilesCleaner::LOCK_FILE."', source files are used", static::class);
+            return null;
+        }
         try {
             clearstatcache(true, $filePath);
-            if ($lock && is_file($filePath)) {
-                @touch($filePath);
-            } elseif (!$this->_writeFileAtomically($rootDir, $filePath, $content)) {
+            // A file of another owner may refuse touch(); rewriting it gives a fresh mark.
+            if (!(is_file($filePath) && $this->_touch($filePath))
+                && !$this->_writeFileAtomically($rootDir, $filePath, $content)) {
                 return null;
             }
 
@@ -637,9 +673,7 @@ JS
                 return null;
             }
         } finally {
-            if ($lock) {
-                CompiledFilesCleaner::unlock($lock);
-            }
+            CompiledFilesCleaner::unlock($lock);
         }
 
         return $fileName;

@@ -135,7 +135,10 @@ Pages refresh usage marks and store files under a shared `flock` on
 `.index/.lock`; cleanup re-checks the mark and unlinks under an exclusive one. A page
 that marked a file in time keeps it; a page that comes too late finds it gone and
 compiles again instead of recreating it empty. Only the hourly mark refresh and a
-store take the lock; an ordinary hit does not.
+store take the lock; an ordinary hit does not, and only when its mark is known to be
+fresh (a vanished index entry is a miss). If the lock cannot be taken, the page uses
+its source files (with a warning in the log); if `touch()` is refused (a file of
+another owner), the store rewrites the file, which gives it a fresh mark.
 
 `getSettingsHash()` is part of the index key and lists the options that change the
 compiled content (and the resolved `webroot`). A subclass adding such an option must

@@ -30,6 +30,27 @@ function indexEntries($dir)
 class RacingComponent extends AssetsAutoCompressComponent
 {
     public $beforeMark;
+    public $beforeUsageMark;
+    public $failLock = false;
+    public $failTouch = false;
+
+    protected function _usageMark($path)
+    {
+        if ($this->beforeUsageMark) {
+            call_user_func($this->beforeUsageMark, $path);
+        }
+        return parent::_usageMark($path);
+    }
+
+    protected function _lockShared($rootDir)
+    {
+        return $this->failLock ? null : parent::_lockShared($rootDir);
+    }
+
+    protected function _touch($path)
+    {
+        return $this->failTouch ? false : parent::_touch($path);
+    }
 
     protected function _markUsed($rootDir, array $paths)
     {
@@ -204,6 +225,35 @@ try {
     check($recompiled === $raceName && filesize("$cssDir/$raceName") > 0
         && md5_file("$cssDir/$raceName") . '.css' === $raceName, 'Page recreated a removed compiled file empty or wrong.');
 
+    // Race: cleanup removed the stale index entry after the page read it and
+    // before its mark was read. A vanished mark is a miss, never a served URL.
+    $ageRace();
+    $component->beforeUsageMark = function ($indexFile) use ($cssDir, $raceName) {
+        unlink($indexFile);
+        unlink("$cssDir/$raceName");
+    };
+    $afterVanish = basename(array_key_first($css->invoke($component, $raceSet(1))));
+    $component->beforeUsageMark = null;
+    clearstatcache();
+    check($afterVanish === $raceName && is_file("$cssDir/$raceName") && filesize("$cssDir/$raceName") > 0, 'Served a compiled file whose index vanished.');
+
+    // No lock: a stale mark cannot be refreshed safely and nothing can be stored,
+    // so the page keeps its source files.
+    $ageRace();
+    $component->failLock = true;
+    $noLock = $css->invoke($component, $raceSet(1));
+    $component->failLock = false;
+    check(array_key_first($noLock) === '/css/a.css?r=1', 'Served an unprotected compiled file without the lock.');
+
+    // touch() refused (a file of another owner): the store rewrites both files,
+    // so the served file has a fresh mark.
+    $ageRace();
+    $component->failTouch = true;
+    $noTouch = basename(array_key_first($css->invoke($component, $raceSet(1))));
+    $component->failTouch = false;
+    clearstatcache();
+    check($noTouch === $raceName && filemtime("$cssDir/$raceName") >= $now - 60, 'Served a compiled file with a stale mark after touch() failed.');
+
     // The exclusive lock of cleanup and the shared lock of pages are one lock file.
     $held = CompiledFilesCleaner::lock($cssDir, LOCK_EX);
     $other = fopen("$cssDir/.index/" . CompiledFilesCleaner::LOCK_FILE, 'r');
@@ -239,7 +289,7 @@ try {
     $otherRoot = new AssetsAutoCompressComponent(['webroot' => $temp . '/other']);
     check($otherRoot->getSettingsHash() !== (new AssetsAutoCompressComponent(['webroot' => $temp]))->getSettingsHash(), 'Settings hash ignores webroot.');
 
-    echo "PASS: content names, no duplicates, atomic writes, usage marks, dry run, cleanup, legacy grace, locked races, foreign entries, read errors, webroot.\n";
+    echo "PASS: content names, no duplicates, atomic writes, usage marks, dry run, cleanup, legacy grace, locked races, vanished index, lock and touch failures, foreign entries, read errors, webroot.\n";
 } finally {
     yii\helpers\FileHelper::removeDirectory($temp);
 }
